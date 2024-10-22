@@ -17,6 +17,7 @@ export interface SettingsAboutResponse {
   totalRequests: number;
   totalMediaItems: number;
   tz?: string;
+  appDataPath: string;
 }
 
 export interface PublicSettingsResponse {
@@ -50,9 +51,15 @@ export interface CacheItem {
   };
 }
 
+export interface CacheResponse {
+  apiCaches: CacheItem[];
+  imageCache: Record<'tmdb', { size: number; imageCount: number }>;
+}
+
 export interface StatusResponse {
   version: string;
   commitTag: string;
   updateAvailable: boolean;
   commitsBehind: number;
+  restartRequired: boolean;
 }

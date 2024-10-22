@@ -1,12 +1,11 @@
-import React from 'react';
-import { MediaType } from '../../../server/constants/media';
-import ImdbLogo from '../../assets/services/imdb.svg';
-import PlexLogo from '../../assets/services/plex.svg';
-import RTLogo from '../../assets/services/rt.svg';
-import TmdbLogo from '../../assets/services/tmdb.svg';
-import TraktLogo from '../../assets/services/trakt.svg';
-import TvdbLogo from '../../assets/services/tvdb.svg';
-import useLocale from '../../hooks/useLocale';
+import ImdbLogo from '@app/assets/services/imdb.svg';
+import PlexLogo from '@app/assets/services/plex.svg';
+import RTLogo from '@app/assets/services/rt.svg';
+import TmdbLogo from '@app/assets/services/tmdb.svg';
+import TraktLogo from '@app/assets/services/trakt.svg';
+import TvdbLogo from '@app/assets/services/tvdb.svg';
+import useLocale from '@app/hooks/useLocale';
+import { MediaType } from '@server/constants/media';
 
 interface ExternalLinkBlockProps {
   mediaType: 'movie' | 'tv';
@@ -17,22 +16,22 @@ interface ExternalLinkBlockProps {
   plexUrl?: string;
 }
 
-const ExternalLinkBlock: React.FC<ExternalLinkBlockProps> = ({
+const ExternalLinkBlock = ({
   mediaType,
   tmdbId,
   tvdbId,
   imdbId,
   rtUrl,
   plexUrl,
-}) => {
+}: ExternalLinkBlockProps) => {
   const { locale } = useLocale();
 
   return (
-    <div className="flex items-center justify-center w-full space-x-5">
+    <div className="flex w-full items-center justify-center space-x-5">
       {plexUrl && (
         <a
           href={plexUrl}
-          className="w-12 transition duration-300 opacity-50 hover:opacity-100"
+          className="w-12 opacity-50 transition duration-300 hover:opacity-100"
           target="_blank"
           rel="noreferrer"
         >
@@ -42,7 +41,7 @@ const ExternalLinkBlock: React.FC<ExternalLinkBlockProps> = ({
       {tmdbId && (
         <a
           href={`https://www.themoviedb.org/${mediaType}/${tmdbId}?language=${locale}`}
-          className="w-8 transition duration-300 opacity-50 hover:opacity-100"
+          className="w-8 opacity-50 transition duration-300 hover:opacity-100"
           target="_blank"
           rel="noreferrer"
         >
@@ -52,7 +51,7 @@ const ExternalLinkBlock: React.FC<ExternalLinkBlockProps> = ({
       {tvdbId && mediaType === MediaType.TV && (
         <a
           href={`http://www.thetvdb.com/?tab=series&id=${tvdbId}`}
-          className="transition duration-300 opacity-50 w-9 hover:opacity-100"
+          className="w-9 opacity-50 transition duration-300 hover:opacity-100"
           target="_blank"
           rel="noreferrer"
         >
@@ -62,7 +61,7 @@ const ExternalLinkBlock: React.FC<ExternalLinkBlockProps> = ({
       {imdbId && (
         <a
           href={`https://www.imdb.com/title/${imdbId}`}
-          className="w-8 transition duration-300 opacity-50 hover:opacity-100"
+          className="w-8 opacity-50 transition duration-300 hover:opacity-100"
           target="_blank"
           rel="noreferrer"
         >
@@ -71,8 +70,8 @@ const ExternalLinkBlock: React.FC<ExternalLinkBlockProps> = ({
       )}
       {rtUrl && (
         <a
-          href={`${rtUrl}`}
-          className="transition duration-300 opacity-50 w-14 hover:opacity-100"
+          href={rtUrl}
+          className="w-14 opacity-50 transition duration-300 hover:opacity-100"
           target="_blank"
           rel="noreferrer"
         >
@@ -84,7 +83,7 @@ const ExternalLinkBlock: React.FC<ExternalLinkBlockProps> = ({
           href={`https://trakt.tv/search/tmdb/${tmdbId}?id_type=${
             mediaType === 'movie' ? 'movie' : 'show'
           }`}
-          className="w-8 transition duration-300 opacity-50 hover:opacity-100"
+          className="w-8 opacity-50 transition duration-300 hover:opacity-100"
           target="_blank"
           rel="noreferrer"
         >

@@ -1,24 +1,18 @@
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/outline';
+import TitleCard from '@app/components/TitleCard';
+import globalMessages from '@app/i18n/globalMessages';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { debounce } from 'lodash';
-import React, {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useSpring } from 'react-spring';
-import globalMessages from '../../i18n/globalMessages';
-import TitleCard from '../TitleCard';
 
 interface SliderProps {
   sliderKey: string;
   items?: JSX.Element[];
   isLoading: boolean;
-  isEmpty: boolean;
-  emptyMessage?: string;
-  placeholder?: ReactNode;
+  isEmpty?: boolean;
+  emptyMessage?: React.ReactNode;
+  placeholder?: React.ReactNode;
 }
 
 enum Direction {
@@ -26,14 +20,14 @@ enum Direction {
   LEFT,
 }
 
-const Slider: React.FC<SliderProps> = ({
+const Slider = ({
   sliderKey,
   items,
   isLoading,
-  isEmpty,
+  isEmpty = false,
   emptyMessage,
   placeholder = <TitleCard.Placeholder />,
-}) => {
+}: SliderProps) => {
   const intl = useIntl();
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollPos, setScrollPos] = useState({ isStart: true, isEnd: false });
@@ -154,16 +148,17 @@ const Slider: React.FC<SliderProps> = ({
   };
 
   return (
-    <div className="relative">
-      <div className="absolute right-0 flex -mt-10 text-gray-400">
+    <div className="relative" data-testid="media-slider">
+      <div className="absolute right-0 -mt-10 flex text-gray-400">
         <button
           className={`${
             scrollPos.isStart ? 'text-gray-800' : 'hover:text-white'
           }`}
           onClick={() => slide(Direction.LEFT)}
           disabled={scrollPos.isStart}
+          type="button"
         >
-          <ChevronLeftIcon className="w-6 h-6" />
+          <ChevronLeftIcon className="h-6 w-6" />
         </button>
         <button
           className={`${
@@ -171,12 +166,13 @@ const Slider: React.FC<SliderProps> = ({
           }`}
           onClick={() => slide(Direction.RIGHT)}
           disabled={scrollPos.isEnd}
+          type="button"
         >
-          <ChevronRightIcon className="w-6 h-6" />
+          <ChevronRightIcon className="h-6 w-6" />
         </button>
       </div>
       <div
-        className="relative px-2 py-2 -my-2 -ml-4 -mr-4 overflow-x-scroll overflow-y-auto whitespace-nowrap hide-scrollbar overscroll-x-contain"
+        className="hide-scrollbar relative -my-2 -ml-4 -mr-4 overflow-y-auto overflow-x-scroll overscroll-x-contain whitespace-nowrap px-2 py-2"
         ref={containerRef}
         onScroll={onScroll}
       >
@@ -198,7 +194,7 @@ const Slider: React.FC<SliderProps> = ({
             </div>
           ))}
         {isEmpty && (
-          <div className="mt-16 mb-16 text-center text-white">
+          <div className="mt-16 mb-16 text-center font-medium text-gray-400">
             {emptyMessage
               ? emptyMessage
               : intl.formatMessage(globalMessages.noresults)}

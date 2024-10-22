@@ -1,7 +1,8 @@
-import { NotificationAgentKey } from '../../lib/settings';
+import type { NotificationAgentKey } from '@server/lib/settings';
 
 export interface UserSettingsGeneralResponse {
   username?: string;
+  discordId?: string;
   locale?: string;
   region?: string;
   originalLanguage?: string;
@@ -13,6 +14,8 @@ export interface UserSettingsGeneralResponse {
   globalMovieQuotaLimit?: number;
   globalTvQuotaLimit?: number;
   globalTvQuotaDays?: number;
+  watchlistSyncMovies?: boolean;
+  watchlistSyncTv?: boolean;
 }
 
 export type NotificationAgentTypes = Record<NotificationAgentKey, number>;
@@ -25,6 +28,7 @@ export interface UserSettingsNotificationsResponse {
   pushbulletAccessToken?: string;
   pushoverApplicationToken?: string;
   pushoverUserKey?: string;
+  pushoverSound?: string;
   telegramEnabled?: boolean;
   telegramBotUsername?: string;
   telegramChatId?: string;

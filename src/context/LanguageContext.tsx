@@ -1,6 +1,8 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 
 export type AvailableLocale =
+  | 'ar'
+  | 'bg'
   | 'ca'
   | 'cs'
   | 'da'
@@ -8,18 +10,27 @@ export type AvailableLocale =
   | 'en'
   | 'el'
   | 'es'
+  | 'fi'
+  | 'fr'
+  | 'hr'
+  | 'he'
+  | 'hi'
+  | 'hu'
   | 'it'
   | 'ja'
-  | 'fr'
-  | 'hu'
+  | 'ko'
+  | 'lt'
   | 'nb-NO'
   | 'nl'
   | 'pl'
   | 'pt-BR'
   | 'pt-PT'
+  | 'ro'
   | 'ru'
+  | 'sq'
   | 'sr'
   | 'sv'
+  | 'uk'
   | 'zh-CN'
   | 'zh-TW';
 
@@ -29,6 +40,10 @@ type AvailableLanguageObject = Record<
 >;
 
 export const availableLanguages: AvailableLanguageObject = {
+  bg: {
+    code: 'bg',
+    display: 'Bulgarian',
+  },
   ca: {
     code: 'ca',
     display: 'Català',
@@ -53,13 +68,33 @@ export const availableLanguages: AvailableLanguageObject = {
     code: 'es',
     display: 'Español',
   },
+  fi: {
+    code: 'fi',
+    display: 'Finnish',
+  },
   fr: {
     code: 'fr',
     display: 'Français',
   },
+  he: {
+    code: 'he',
+    display: 'Hebrew',
+  },
+  hi: {
+    code: 'hi',
+    display: 'Hindi',
+  },
+  hr: {
+    code: 'hr',
+    display: 'Hrvatski',
+  },
   it: {
     code: 'it',
     display: 'Italiano',
+  },
+  lt: {
+    code: 'lt',
+    display: 'Lietuvių',
   },
   hu: {
     code: 'hu',
@@ -85,6 +120,10 @@ export const availableLanguages: AvailableLanguageObject = {
     code: 'pt-PT',
     display: 'Português (Portugal)',
   },
+  sq: {
+    code: 'sq',
+    display: 'Shqip',
+  },
   sv: {
     code: 'sv',
     display: 'Svenska',
@@ -92,6 +131,10 @@ export const availableLanguages: AvailableLanguageObject = {
   el: {
     code: 'el',
     display: 'Ελληνικά',
+  },
+  ro: {
+    code: 'ro',
+    display: 'Romanian',
   },
   ru: {
     code: 'ru',
@@ -101,9 +144,21 @@ export const availableLanguages: AvailableLanguageObject = {
     code: 'sr',
     display: 'српски језик',
   },
+  ar: {
+    code: 'ar',
+    display: 'العربية',
+  },
   ja: {
     code: 'ja',
     display: '日本語',
+  },
+  ko: {
+    code: 'ko',
+    display: '한국어',
+  },
+  uk: {
+    code: 'uk',
+    display: 'українська мова',
   },
   'zh-TW': {
     code: 'zh-TW',
@@ -117,7 +172,7 @@ export const availableLanguages: AvailableLanguageObject = {
 
 export interface LanguageContextProps {
   locale: AvailableLocale;
-  children: (locale: string) => ReactNode;
+  children: (locale: string) => React.ReactNode;
   setLocale?: React.Dispatch<React.SetStateAction<AvailableLocale>>;
 }
 

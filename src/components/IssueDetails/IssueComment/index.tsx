@@ -1,18 +1,16 @@
-import { Menu } from '@headlessui/react';
-import { ExclamationIcon } from '@heroicons/react/outline';
-import { DotsVerticalIcon } from '@heroicons/react/solid';
+import Button from '@app/components/Common/Button';
+import Modal from '@app/components/Common/Modal';
+import { Permission, useUser } from '@app/hooks/useUser';
+import { Menu, Transition } from '@headlessui/react';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
+import type { default as IssueCommentType } from '@server/entity/IssueComment';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { defineMessages, FormattedRelativeTime, useIntl } from 'react-intl';
 import ReactMarkdown from 'react-markdown';
 import * as Yup from 'yup';
-import type { default as IssueCommentType } from '../../../../server/entity/IssueComment';
-import { Permission, useUser } from '../../../hooks/useUser';
-import Button from '../../Common/Button';
-import Modal from '../../Common/Modal';
-import Transition from '../../Transition';
 
 const messages = defineMessages({
   postedby: 'Posted {relativeTime} by {username}',
@@ -30,12 +28,12 @@ interface IssueCommentProps {
   onUpdate?: () => void;
 }
 
-const IssueComment: React.FC<IssueCommentProps> = ({
+const IssueComment = ({
   comment,
   isReversed = false,
   isActiveUser = false,
   onUpdate,
-}) => {
+}: IssueCommentProps) => {
   const intl = useIntl();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -66,10 +64,11 @@ const IssueComment: React.FC<IssueCommentProps> = ({
       } mt-4 space-x-4`}
     >
       <Transition
-        enter="transition opacity-0 duration-300"
+        as={Fragment}
+        enter="transition-opacity duration-300"
         enterFrom="opacity-0"
         enterTo="opacity-100"
-        leave="transition opacity-100 duration-300"
+        leave="transition-opacity duration-300"
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
         show={showDeleteModal}
@@ -80,7 +79,6 @@ const IssueComment: React.FC<IssueCommentProps> = ({
           onOk={() => deleteComment()}
           okText={intl.formatMessage(messages.delete)}
           okButtonType="danger"
-          iconSvg={<ExclamationIcon />}
         >
           {intl.formatMessage(messages.areyousuredelete)}
         </Modal>
@@ -90,7 +88,7 @@ const IssueComment: React.FC<IssueCommentProps> = ({
           <img
             src={comment.user.avatar}
             alt=""
-            className="w-10 h-10 transition duration-300 scale-100 rounded-full ring-1 ring-gray-500 transform-gpu hover:scale-105"
+            className="h-10 w-10 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
           />
         </a>
       </Link>
@@ -99,32 +97,33 @@ const IssueComment: React.FC<IssueCommentProps> = ({
           {(isActiveUser || hasPermission(Permission.MANAGE_ISSUES)) && (
             <Menu
               as="div"
-              className="absolute z-40 inline-block text-left top-2 right-1"
+              className="absolute top-2 right-1 z-40 inline-block text-left"
             >
               {({ open }) => (
                 <>
                   <div>
-                    <Menu.Button className="flex items-center text-gray-400 rounded-full hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500">
+                    <Menu.Button className="flex items-center rounded-full text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
                       <span className="sr-only">Open options</span>
-                      <DotsVerticalIcon
-                        className="w-5 h-5"
+                      <EllipsisVerticalIcon
+                        className="h-5 w-5"
                         aria-hidden="true"
                       />
                     </Menu.Button>
                   </div>
 
                   <Transition
+                    as={Fragment}
                     show={open}
                     enter="transition ease-out duration-100"
-                    enterFrom="transform opacity-0 scale-95"
-                    enterTo="transform opacity-100 scale-100"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
                     leave="transition ease-in duration-75"
-                    leaveFrom="transform opacity-100 scale-100"
-                    leaveTo="transform opacity-0 scale-95"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
                   >
                     <Menu.Items
                       static
-                      className="absolute right-0 w-56 mt-2 origin-top-right bg-gray-700 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                      className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                     >
                       <div className="py-1">
                         {isActiveUser && (
@@ -132,7 +131,7 @@ const IssueComment: React.FC<IssueCommentProps> = ({
                             {({ active }) => (
                               <button
                                 onClick={() => setIsEditing(true)}
-                                className={`block w-full text-left px-4 py-2 text-sm ${
+                                className={`block w-full px-4 py-2 text-left text-sm ${
                                   active
                                     ? 'bg-gray-600 text-white'
                                     : 'text-gray-100'
@@ -147,7 +146,7 @@ const IssueComment: React.FC<IssueCommentProps> = ({
                           {({ active }) => (
                             <button
                               onClick={() => setShowDeleteModal(true)}
-                              className={`block w-full text-left px-4 py-2 text-sm ${
+                              className={`block w-full px-4 py-2 text-left text-sm ${
                                 active
                                   ? 'bg-gray-600 text-white'
                                   : 'text-gray-100'
@@ -165,11 +164,11 @@ const IssueComment: React.FC<IssueCommentProps> = ({
             </Menu>
           )}
           <div
-            className={`absolute w-3 h-3 transform rotate-45 bg-gray-800 shadow top-3 z-10 ring-1 ring-gray-500 ${
+            className={`absolute top-3 z-10 h-3 w-3 rotate-45 bg-gray-800 shadow ring-1 ring-gray-500 ${
               isReversed ? '-left-1' : '-right-1'
             }`}
           />
-          <div className="relative z-20 w-full py-4 pl-4 pr-8 bg-gray-800 rounded-md">
+          <div className="relative z-20 w-full rounded-md bg-gray-800 py-4 pl-4 pr-8">
             {isEditing ? (
               <Formik
                 initialValues={{ newMessage: comment.message }}
@@ -195,10 +194,12 @@ const IssueComment: React.FC<IssueCommentProps> = ({
                         name="newMessage"
                         className="h-24"
                       />
-                      {errors.newMessage && touched.newMessage && (
-                        <div className="error">{errors.newMessage}</div>
-                      )}
-                      <div className="flex items-center justify-end mt-4 space-x-2">
+                      {errors.newMessage &&
+                        touched.newMessage &&
+                        typeof errors.newMessage === 'string' && (
+                          <div className="error">{errors.newMessage}</div>
+                        )}
+                      <div className="mt-4 flex items-center justify-end space-x-2">
                         <Button
                           type="button"
                           onClick={() => setIsEditing(false)}
@@ -217,7 +218,7 @@ const IssueComment: React.FC<IssueCommentProps> = ({
                 }}
               </Formik>
             ) : (
-              <div className="w-full max-w-full prose">
+              <div className="prose w-full max-w-full">
                 <ReactMarkdown skipHtml allowedElements={['p', 'em', 'strong']}>
                   {comment.message}
                 </ReactMarkdown>
@@ -226,7 +227,7 @@ const IssueComment: React.FC<IssueCommentProps> = ({
           </div>
         </div>
         <div
-          className={`flex justify-between items-center text-xs pt-2 ${
+          className={`flex items-center justify-between pt-2 text-xs ${
             isReversed ? 'flex-row-reverse' : 'flex-row'
           }`}
         >

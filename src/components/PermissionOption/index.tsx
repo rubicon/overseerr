@@ -1,7 +1,7 @@
-import React from 'react';
-import { hasPermission } from '../../../server/lib/permissions';
-import useSettings from '../../hooks/useSettings';
-import { Permission, User } from '../../hooks/useUser';
+import useSettings from '@app/hooks/useSettings';
+import type { User } from '@app/hooks/useUser';
+import { Permission } from '@app/hooks/useUser';
+import { hasPermission } from '@server/lib/permissions';
 
 export interface PermissionItem {
   id: string;
@@ -26,14 +26,14 @@ interface PermissionOptionProps {
   onUpdate: (newPermissions: number) => void;
 }
 
-const PermissionOption: React.FC<PermissionOptionProps> = ({
+const PermissionOption = ({
   option,
   actingUser,
   currentUser,
   currentPermission,
   onUpdate,
   parent,
-}) => {
+}: PermissionOptionProps) => {
   const settings = useSettings();
 
   const autoApprovePermissions = [
@@ -66,14 +66,9 @@ const PermissionOption: React.FC<PermissionOptionProps> = ({
   }
 
   if (
-    // Non-Admin users cannot modify the Admin permission
-    (actingUser &&
-      !hasPermission(Permission.ADMIN, actingUser.permissions) &&
-      option.permission === Permission.ADMIN) ||
-    // Users without the Manage Settings permission cannot modify/grant that permission
-    (actingUser &&
-      !hasPermission(Permission.MANAGE_SETTINGS, actingUser.permissions) &&
-      option.permission === Permission.MANAGE_SETTINGS)
+    // Only the owner can modify the Admin permission
+    actingUser?.id !== 1 &&
+    option.permission === Permission.ADMIN
   ) {
     disabled = true;
   }
@@ -107,11 +102,11 @@ const PermissionOption: React.FC<PermissionOptionProps> = ({
   return (
     <>
       <div
-        className={`relative flex items-start first:mt-0 mt-4 ${
+        className={`relative mt-4 flex items-start first:mt-0 ${
           disabled ? 'opacity-50' : ''
         }`}
       >
-        <div className="flex items-center h-6">
+        <div className="flex h-6 items-center">
           <input
             id={option.id}
             name="permissions"
@@ -139,7 +134,7 @@ const PermissionOption: React.FC<PermissionOptionProps> = ({
         </div>
       </div>
       {(option.children ?? []).map((child) => (
-        <div key={`permission-child-${child.id}`} className="pl-10 mt-4">
+        <div key={`permission-child-${child.id}`} className="mt-4 pl-10">
           <PermissionOption
             option={child}
             currentPermission={currentPermission}

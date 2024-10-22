@@ -1,18 +1,18 @@
-import { XCircleIcon } from '@heroicons/react/solid';
+import Accordion from '@app/components/Common/Accordion';
+import ImageFader from '@app/components/Common/ImageFader';
+import PageTitle from '@app/components/Common/PageTitle';
+import LanguagePicker from '@app/components/Layout/LanguagePicker';
+import LocalLogin from '@app/components/Login/LocalLogin';
+import PlexLoginButton from '@app/components/PlexLoginButton';
+import useSettings from '@app/hooks/useSettings';
+import { useUser } from '@app/hooks/useUser';
+import { Transition } from '@headlessui/react';
+import { XCircleIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import { useRouter } from 'next/dist/client/router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import useSWR from 'swr';
-import useSettings from '../../hooks/useSettings';
-import { useUser } from '../../hooks/useUser';
-import Accordion from '../Common/Accordion';
-import ImageFader from '../Common/ImageFader';
-import PageTitle from '../Common/PageTitle';
-import LanguagePicker from '../Layout/LanguagePicker';
-import PlexLoginButton from '../PlexLoginButton';
-import Transition from '../Transition';
-import LocalLogin from './LocalLogin';
 
 const messages = defineMessages({
   signin: 'Sign In',
@@ -21,7 +21,7 @@ const messages = defineMessages({
   signinwithoverseerr: 'Use your {applicationTitle} account',
 });
 
-const Login: React.FC = () => {
+const Login = () => {
   const intl = useIntl();
   const [error, setError] = useState('');
   const [isProcessing, setProcessing] = useState(false);
@@ -68,21 +68,21 @@ const Login: React.FC = () => {
   });
 
   return (
-    <div className="relative flex flex-col min-h-screen bg-gray-900 py-14">
+    <div className="relative flex min-h-screen flex-col bg-gray-900 py-14">
       <PageTitle title={intl.formatMessage(messages.signin)} />
       <ImageFader
         backgroundImages={
           backdrops?.map(
-            (backdrop) => `https://www.themoviedb.org/t/p/original${backdrop}`
+            (backdrop) => `https://image.tmdb.org/t/p/original${backdrop}`
           ) ?? []
         }
       />
-      <div className="absolute z-50 top-4 right-4">
+      <div className="absolute top-4 right-4 z-50">
         <LanguagePicker />
       </div>
-      <div className="relative z-40 flex flex-col items-center px-4 mt-10 sm:mx-auto sm:w-full sm:max-w-md">
-        <img src="/logo_stacked.svg" className="max-w-full mb-10" alt="Logo" />
-        <h2 className="mt-2 text-3xl font-extrabold leading-9 text-center text-gray-100">
+      <div className="relative z-40 mt-10 flex flex-col items-center px-4 sm:mx-auto sm:w-full sm:max-w-md">
+        <img src="/logo_stacked.svg" className="mb-10 max-w-full" alt="Logo" />
+        <h2 className="mt-2 text-center text-3xl font-extrabold leading-9 text-gray-100">
           {intl.formatMessage(messages.signinheader)}
         </h2>
       </div>
@@ -93,18 +93,19 @@ const Login: React.FC = () => {
         >
           <>
             <Transition
+              as="div"
               show={!!error}
-              enter="opacity-0 transition duration-300"
+              enter="transition-opacity duration-300"
               enterFrom="opacity-0"
               enterTo="opacity-100"
-              leave="opacity-100 transition duration-300"
+              leave="transition-opacity duration-300"
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
-              <div className="p-4 mb-4 bg-red-600 rounded-md">
+              <div className="mb-4 rounded-md bg-red-600 p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <XCircleIcon className="w-5 h-5 text-red-300" />
+                    <XCircleIcon className="h-5 w-5 text-red-300" />
                   </div>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-red-300">
@@ -118,11 +119,11 @@ const Login: React.FC = () => {
               {({ openIndexes, handleClick, AccordionContent }) => (
                 <>
                   <button
-                    className={`font-bold w-full py-2 text-sm text-center text-gray-400 transition-colors duration-200 bg-gray-800 cursor-default focus:outline-none bg-opacity-70 sm:rounded-t-lg ${
+                    className={`w-full cursor-default bg-gray-800 bg-opacity-70 py-2 text-center text-sm font-bold text-gray-400 transition-colors duration-200 focus:outline-none sm:rounded-t-lg ${
                       openIndexes.includes(0) && 'text-indigo-500'
                     } ${
                       settings.currentSettings.localLogin &&
-                      'hover:bg-gray-700 hover:cursor-pointer'
+                      'hover:cursor-pointer hover:bg-gray-700'
                     }`}
                     onClick={() => handleClick(0)}
                     disabled={!settings.currentSettings.localLogin}
@@ -140,7 +141,7 @@ const Login: React.FC = () => {
                   {settings.currentSettings.localLogin && (
                     <div>
                       <button
-                        className={`font-bold w-full py-2 text-sm text-center text-gray-400 transition-colors duration-200 bg-gray-800 cursor-default focus:outline-none bg-opacity-70 hover:bg-gray-700 hover:cursor-pointer ${
+                        className={`w-full cursor-default bg-gray-800 bg-opacity-70 py-2 text-center text-sm font-bold text-gray-400 transition-colors duration-200 hover:cursor-pointer hover:bg-gray-700 focus:outline-none ${
                           openIndexes.includes(1)
                             ? 'text-indigo-500'
                             : 'sm:rounded-b-lg'

@@ -1,7 +1,7 @@
-import logger from '../../logger';
+import logger from '@server/logger';
 import ServarrBase from './base';
 
-interface RadarrMovieOptions {
+export interface RadarrMovieOptions {
   title: string;
   qualityProfileId: number;
   minimumAvailability: string;
@@ -27,7 +27,6 @@ export interface RadarrMovie {
   profileId: number;
   qualityProfileId: number;
   added: string;
-  downloaded: boolean;
   hasFile: boolean;
 }
 
@@ -70,7 +69,7 @@ class RadarrAPI extends ServarrBase<{ movieId: number }> {
 
       return response.data[0];
     } catch (e) {
-      logger.error('Error retrieving movie by TMDb ID', {
+      logger.error('Error retrieving movie by TMDB ID', {
         label: 'Radarr API',
         errorMessage: e.message,
         tmdbId: id,
@@ -85,7 +84,7 @@ class RadarrAPI extends ServarrBase<{ movieId: number }> {
     try {
       const movie = await this.getMovieByTmdbId(options.tmdbId);
 
-      if (movie.downloaded) {
+      if (movie.hasFile) {
         logger.info(
           'Title already exists and is available. Skipping add and returning success',
           {

@@ -1,23 +1,22 @@
-import { SaveIcon } from '@heroicons/react/outline';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import SensitiveInput from '@app/components/Common/SensitiveInput';
+import NotificationTypeSelector, {
+  ALL_NOTIFICATIONS,
+} from '@app/components/NotificationTypeSelector';
+import { OpenPgpLink } from '@app/components/Settings/Notifications/NotificationsEmail';
+import SettingsBadge from '@app/components/Settings/SettingsBadge';
+import { useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
+import { ArrowDownOnSquareIcon } from '@heroicons/react/24/outline';
+import type { UserSettingsNotificationsResponse } from '@server/interfaces/api/userSettingsInterfaces';
 import axios from 'axios';
 import { Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
-import React from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
 import * as Yup from 'yup';
-import { UserSettingsNotificationsResponse } from '../../../../../server/interfaces/api/userSettingsInterfaces';
-import { useUser } from '../../../../hooks/useUser';
-import globalMessages from '../../../../i18n/globalMessages';
-import Badge from '../../../Common/Badge';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import SensitiveInput from '../../../Common/SensitiveInput';
-import NotificationTypeSelector, {
-  ALL_NOTIFICATIONS,
-} from '../../../NotificationTypeSelector';
-import { OpenPgpLink } from '../../../Settings/Notifications/NotificationsEmail';
 
 const messages = defineMessages({
   emailsettingssaved: 'Email notification settings saved successfully!',
@@ -28,12 +27,16 @@ const messages = defineMessages({
   validationPgpPublicKey: 'You must provide a valid PGP public key',
 });
 
-const UserEmailSettings: React.FC = () => {
+const UserEmailSettings = () => {
   const intl = useIntl();
   const { addToast } = useToasts();
   const router = useRouter();
   const { user } = useUser({ id: Number(router.query.userId) });
-  const { data, error, revalidate } = useSWR<UserSettingsNotificationsResponse>(
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<UserSettingsNotificationsResponse>(
     user ? `/api/v1/user/${user?.id}/settings/notifications` : null
   );
 
@@ -102,16 +105,14 @@ const UserEmailSettings: React.FC = () => {
                 <span className="mr-2">
                   {intl.formatMessage(messages.pgpPublicKey)}
                 </span>
-                <Badge badgeType="danger">
-                  {intl.formatMessage(globalMessages.advanced)}
-                </Badge>
+                <SettingsBadge badgeType="advanced" />
                 <span className="label-tip">
                   {intl.formatMessage(messages.pgpPublicKeyTip, {
                     OpenPgpLink: OpenPgpLink,
                   })}
                 </span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <SensitiveInput
                     as="field"
@@ -122,9 +123,11 @@ const UserEmailSettings: React.FC = () => {
                     className="font-mono text-xs"
                   />
                 </div>
-                {errors.pgpKey && touched.pgpKey && (
-                  <div className="error">{errors.pgpKey}</div>
-                )}
+                {errors.pgpKey &&
+                  touched.pgpKey &&
+                  typeof errors.pgpKey === 'string' && (
+                    <div className="error">{errors.pgpKey}</div>
+                  )}
               </div>
             </div>
             <NotificationTypeSelector
@@ -142,13 +145,13 @@ const UserEmailSettings: React.FC = () => {
             />
             <div className="actions">
               <div className="flex justify-end">
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="primary"
                     type="submit"
                     disabled={isSubmitting || !isValid}
                   >
-                    <SaveIcon />
+                    <ArrowDownOnSquareIcon />
                     <span>
                       {isSubmitting
                         ? intl.formatMessage(globalMessages.saving)

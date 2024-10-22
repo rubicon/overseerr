@@ -1,4 +1,4 @@
-FROM node:14.18-alpine AS BUILD_IMAGE
+FROM node:18.18-alpine AS BUILD_IMAGE
 
 WORKDIR /app
 
@@ -7,14 +7,15 @@ ENV TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
 
 RUN \
   case "${TARGETPLATFORM}" in \
-    'linux/arm64' | 'linux/arm/v7') \
-      apk add --no-cache python3 make g++ && \
-      ln -s /usr/bin/python3 /usr/bin/python \
-      ;; \
+  'linux/arm64' | 'linux/arm/v7') \
+  apk update && \
+  apk add --no-cache python3 make g++ gcc libc6-compat bash && \
+  yarn global add node-gyp \
+  ;; \
   esac
 
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 1000000
+RUN CYPRESS_INSTALL_BINARY=0 yarn install --frozen-lockfile --network-timeout 1000000
 
 COPY . ./
 
@@ -33,7 +34,7 @@ RUN touch config/DOCKER
 RUN echo "{\"commitTag\": \"${COMMIT_TAG}\"}" > committag.json
 
 
-FROM node:14.18-alpine
+FROM node:18.18-alpine
 
 WORKDIR /app
 

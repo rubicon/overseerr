@@ -1,9 +1,9 @@
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/solid';
+import ProgressCircle from '@app/components/Common/ProgressCircle';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
+import type { QuotaStatus } from '@server/interfaces/api/userInterfaces';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
-import { QuotaStatus } from '../../../../server/interfaces/api/userInterfaces';
-import ProgressCircle from '../../Common/ProgressCircle';
 
 const messages = defineMessages({
   requestsremaining:
@@ -35,18 +35,18 @@ interface QuotaDisplayProps {
   overLimit?: number;
 }
 
-const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
+const QuotaDisplay = ({
   quota,
   mediaType,
   userOverride,
   remaining,
   overLimit,
-}) => {
+}: QuotaDisplayProps) => {
   const intl = useIntl();
   const [showDetails, setShowDetails] = useState(false);
   return (
     <div
-      className="flex flex-col p-4 my-4 bg-gray-800 rounded-md"
+      className="my-4 flex flex-col rounded-md border border-gray-700 p-4 backdrop-blur"
       onClick={() => setShowDetails((s) => !s)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
@@ -58,7 +58,7 @@ const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
     >
       <div className="flex items-center">
         <ProgressCircle
-          className="w-8 h-8"
+          className="h-8 w-8"
           progress={Math.round(
             ((remaining ?? quota?.remaining ?? 0) / (quota?.limit ?? 1)) * 100
           )}
@@ -79,17 +79,15 @@ const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
                   type: intl.formatMessage(
                     mediaType === 'movie' ? messages.movie : messages.season
                   ),
-                  strong: function strong(msg) {
-                    return <span className="font-bold">{msg}</span>;
-                  },
+                  strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
                 })}
           </div>
         </div>
-        <div className="flex justify-end flex-1">
+        <div className="flex flex-1 justify-end">
           {showDetails ? (
-            <ChevronUpIcon className="w-6 h-6" />
+            <ChevronUpIcon className="h-6 w-6" />
           ) : (
-            <ChevronDownIcon className="w-6 h-6" />
+            <ChevronDownIcon className="h-6 w-6" />
           )}
         </div>
       </div>
@@ -103,9 +101,7 @@ const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
                   : messages.requiredquota,
                 {
                   seasons: overLimit,
-                  strong: function strong(msg) {
-                    return <span className="font-bold">{msg}</span>;
-                  },
+                  strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
                 }
               )}
             </div>
@@ -124,9 +120,7 @@ const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
                     : messages.seasonlimit,
                   { limit: quota?.limit }
                 ),
-                strong: function strong(msg) {
-                  return <span className="font-bold">{msg}</span>;
-                },
+                strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
               }
             )}
           </div>
@@ -134,19 +128,15 @@ const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
             {intl.formatMessage(
               userOverride ? messages.quotaLinkUser : messages.quotaLink,
               {
-                ProfileLink: function ProfileLink(msg) {
-                  return (
-                    <Link
-                      href={
-                        userOverride ? `/users/${userOverride}` : '/profile'
-                      }
-                    >
-                      <a className="text-white transition duration-300 hover:underline">
-                        {msg}
-                      </a>
-                    </Link>
-                  );
-                },
+                ProfileLink: (msg: React.ReactNode) => (
+                  <Link
+                    href={userOverride ? `/users/${userOverride}` : '/profile'}
+                  >
+                    <a className="text-white transition duration-300 hover:underline">
+                      {msg}
+                    </a>
+                  </Link>
+                ),
               }
             )}
           </div>

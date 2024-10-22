@@ -1,24 +1,21 @@
-import { PencilIcon, PlusIcon } from '@heroicons/react/solid';
+import Modal from '@app/components/Common/Modal';
+import SensitiveInput from '@app/components/Common/SensitiveInput';
+import globalMessages from '@app/i18n/globalMessages';
+import { Transition } from '@headlessui/react';
+import type { SonarrSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Field, Formik } from 'formik';
-import dynamic from 'next/dynamic';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
-import type { OptionsType, OptionTypeBase } from 'react-select';
+import type { OnChangeValue } from 'react-select';
+import Select from 'react-select';
 import { useToasts } from 'react-toast-notifications';
 import * as Yup from 'yup';
-import type { SonarrSettings } from '../../../../server/lib/settings';
-import globalMessages from '../../../i18n/globalMessages';
-import Modal from '../../Common/Modal';
-import SensitiveInput from '../../Common/SensitiveInput';
-import Transition from '../../Transition';
 
 type OptionType = {
-  value: string;
+  value: number;
   label: string;
 };
-
-const Select = dynamic(() => import('react-select'), { ssr: false });
 
 const messages = defineMessages({
   createsonarr: 'Add New Sonarr Server',
@@ -46,6 +43,8 @@ const messages = defineMessages({
   qualityprofile: 'Quality Profile',
   languageprofile: 'Language Profile',
   rootfolder: 'Root Folder',
+  seriesType: 'Series Type',
+  animeSeriesType: 'Anime Series Type',
   animequalityprofile: 'Anime Quality Profile',
   animelanguageprofile: 'Anime Language Profile',
   animerootfolder: 'Anime Root Folder',
@@ -65,6 +64,9 @@ const messages = defineMessages({
   syncEnabled: 'Enable Scan',
   externalUrl: 'External URL',
   enableSearch: 'Enable Automatic Search',
+  tagRequests: 'Tag Requests',
+  tagRequestsInfo:
+    "Automatically add an additional tag with the requester's user ID & display name",
   validationApplicationUrl: 'You must provide a valid URL',
   validationApplicationUrlTrailingSlash: 'URL must not end in a trailing slash',
   validationBaseUrlLeadingSlash: 'Base URL must have a leading slash',
@@ -101,11 +103,7 @@ interface SonarrModalProps {
   onSave: () => void;
 }
 
-const SonarrModal: React.FC<SonarrModalProps> = ({
-  onClose,
-  sonarr,
-  onSave,
-}) => {
+const SonarrModal = ({ onClose, sonarr, onSave }: SonarrModalProps) => {
   const intl = useIntl();
   const initialLoad = useRef(false);
   const { addToast } = useToasts();
@@ -227,12 +225,13 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
 
   return (
     <Transition
+      as="div"
       appear
       show
-      enter="transition ease-in-out duration-300 transform opacity-0"
+      enter="transition-opacity ease-in-out duration-300"
       enterFrom="opacity-0"
-      enterTo="opacuty-100"
-      leave="transition ease-in-out duration-300 transform opacity-100"
+      enterTo="opacity-100"
+      leave="transition-opacity ease-in-out duration-300"
       leaveFrom="opacity-100"
       leaveTo="opacity-0"
     >
@@ -247,6 +246,8 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
           activeProfileId: sonarr?.activeProfileId,
           activeLanguageProfileId: sonarr?.activeLanguageProfileId,
           rootFolder: sonarr?.activeDirectory,
+          seriesType: sonarr?.seriesType,
+          animeSeriesType: sonarr?.animeSeriesType,
           activeAnimeProfileId: sonarr?.activeAnimeProfileId,
           activeAnimeLanguageProfileId: sonarr?.activeAnimeLanguageProfileId,
           activeAnimeRootFolder: sonarr?.activeAnimeDirectory,
@@ -258,6 +259,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
           externalUrl: sonarr?.externalUrl,
           syncEnabled: sonarr?.syncEnabled ?? false,
           enableSearch: !sonarr?.preventSearch,
+          tagRequests: sonarr?.tagRequests ?? false,
         }}
         validationSchema={SonarrSettingsSchema}
         onSubmit={async (values) => {
@@ -282,6 +284,8 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                 : undefined,
               activeProfileName: profileName,
               activeDirectory: values.rootFolder,
+              seriesType: values.seriesType,
+              animeSeriesType: values.animeSeriesType,
               activeAnimeProfileId: values.activeAnimeProfileId
                 ? Number(values.activeAnimeProfileId)
                 : undefined,
@@ -298,6 +302,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
               externalUrl: values.externalUrl,
               syncEnabled: values.syncEnabled,
               preventSearch: !values.enableSearch,
+              tagRequests: values.tagRequests,
             };
             if (!sonarr) {
               await axios.post('/api/v1/settings/sonarr', submission);
@@ -374,7 +379,6 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                       values.is4k ? messages.edit4ksonarr : messages.editsonarr
                     )
               }
-              iconSvg={!sonarr ? <PlusIcon /> : <PencilIcon />}
             >
               <div className="mb-6">
                 <div className="form-row">
@@ -385,7 +389,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         : messages.defaultserver
                     )}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field type="checkbox" id="isDefault" name="isDefault" />
                   </div>
                 </div>
@@ -393,7 +397,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   <label htmlFor="is4k" className="checkbox-label">
                     {intl.formatMessage(messages.server4k)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field type="checkbox" id="is4k" name="is4k" />
                   </div>
                 </div>
@@ -402,7 +406,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                     {intl.formatMessage(messages.servername)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         id="name"
@@ -414,9 +418,11 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         }}
                       />
                     </div>
-                    {errors.name && touched.name && (
-                      <div className="error">{errors.name}</div>
-                    )}
+                    {errors.name &&
+                      touched.name &&
+                      typeof errors.name === 'string' && (
+                        <div className="error">{errors.name}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -424,7 +430,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                     {intl.formatMessage(messages.hostname)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <span className="protocol">
                         {values.ssl ? 'https://' : 'http://'}
@@ -441,9 +447,11 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         className="rounded-r-only"
                       />
                     </div>
-                    {errors.hostname && touched.hostname && (
-                      <div className="error">{errors.hostname}</div>
-                    )}
+                    {errors.hostname &&
+                      touched.hostname &&
+                      typeof errors.hostname === 'string' && (
+                        <div className="error">{errors.hostname}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -451,7 +459,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                     {intl.formatMessage(messages.port)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       id="port"
                       name="port"
@@ -463,16 +471,18 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         setFieldValue('port', e.target.value);
                       }}
                     />
-                    {errors.port && touched.port && (
-                      <div className="error">{errors.port}</div>
-                    )}
+                    {errors.port &&
+                      touched.port &&
+                      typeof errors.port === 'string' && (
+                        <div className="error">{errors.port}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="ssl" className="checkbox-label">
                     {intl.formatMessage(messages.ssl)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="ssl"
@@ -489,7 +499,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                     {intl.formatMessage(messages.apiKey)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <SensitiveInput
                         as="field"
@@ -502,16 +512,18 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         }}
                       />
                     </div>
-                    {errors.apiKey && touched.apiKey && (
-                      <div className="error">{errors.apiKey}</div>
-                    )}
+                    {errors.apiKey &&
+                      touched.apiKey &&
+                      typeof errors.apiKey === 'string' && (
+                        <div className="error">{errors.apiKey}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="baseUrl" className="text-label">
                     {intl.formatMessage(messages.baseUrl)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         id="baseUrl"
@@ -524,17 +536,40 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         }}
                       />
                     </div>
-                    {errors.baseUrl && touched.baseUrl && (
-                      <div className="error">{errors.baseUrl}</div>
-                    )}
+                    {errors.baseUrl &&
+                      touched.baseUrl &&
+                      typeof errors.baseUrl === 'string' && (
+                        <div className="error">{errors.baseUrl}</div>
+                      )}
                   </div>
+                </div>
+                <div className="form-row">
+                  <label htmlFor="seriesType" className="text-label">
+                    {intl.formatMessage(messages.seriesType)}
+                  </label>
+                  <div className="form-input-area">
+                    <div className="form-input-field">
+                      <Field
+                        as="select"
+                        id="seriesType"
+                        name="seriesType"
+                        disabled={!isValidated || isTesting}
+                      >
+                        <option value="standard">Standard</option>
+                        <option value="daily">Daily</option>
+                      </Field>
+                    </div>
+                  </div>
+                  {errors.seriesType && touched.seriesType && (
+                    <div className="error">{errors.seriesType}</div>
+                  )}
                 </div>
                 <div className="form-row">
                   <label htmlFor="activeProfileId" className="text-label">
                     {intl.formatMessage(messages.qualityprofile)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -562,9 +597,11 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                           ))}
                       </Field>
                     </div>
-                    {errors.activeProfileId && touched.activeProfileId && (
-                      <div className="error">{errors.activeProfileId}</div>
-                    )}
+                    {errors.activeProfileId &&
+                      touched.activeProfileId &&
+                      typeof errors.activeProfileId === 'string' && (
+                        <div className="error">{errors.activeProfileId}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -572,7 +609,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                     {intl.formatMessage(messages.rootfolder)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -598,9 +635,11 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                           ))}
                       </Field>
                     </div>
-                    {errors.rootFolder && touched.rootFolder && (
-                      <div className="error">{errors.rootFolder}</div>
-                    )}
+                    {errors.rootFolder &&
+                      touched.rootFolder &&
+                      typeof errors.rootFolder === 'string' && (
+                        <div className="error">{errors.rootFolder}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -611,7 +650,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                     {intl.formatMessage(messages.languageprofile)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -655,8 +694,8 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   <label htmlFor="tags" className="text-label">
                     {intl.formatMessage(messages.tags)}
                   </label>
-                  <div className="form-input">
-                    <Select
+                  <div className="form-input-area">
+                    <Select<OptionType, true>
                       options={
                         isValidated
                           ? testResponse.tags.map((tag) => ({
@@ -680,25 +719,29 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                       value={
                         isTesting
                           ? []
-                          : values.tags.map((tagId) => {
-                              const foundTag = testResponse.tags.find(
-                                (tag) => tag.id === tagId
-                              );
-                              return {
-                                value: foundTag?.id,
-                                label: foundTag?.label,
-                              };
-                            })
+                          : (values.tags
+                              .map((tagId) => {
+                                const foundTag = testResponse.tags.find(
+                                  (tag) => tag.id === tagId
+                                );
+
+                                if (!foundTag) {
+                                  return undefined;
+                                }
+
+                                return {
+                                  value: foundTag.id,
+                                  label: foundTag.label,
+                                };
+                              })
+                              .filter(
+                                (option) => option !== undefined
+                              ) as OptionType[])
                       }
-                      onChange={(
-                        value: OptionTypeBase | OptionsType<OptionType> | null
-                      ) => {
-                        if (!Array.isArray(value)) {
-                          return;
-                        }
+                      onChange={(value: OnChangeValue<OptionType, true>) => {
                         setFieldValue(
                           'tags',
-                          value?.map((option) => option.value)
+                          value.map((option) => option.value)
                         );
                       }}
                       noOptionsMessage={() =>
@@ -708,10 +751,31 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   </div>
                 </div>
                 <div className="form-row">
+                  <label htmlFor="animeSeriesType" className="text-label">
+                    {intl.formatMessage(messages.animeSeriesType)}
+                  </label>
+                  <div className="form-input-area">
+                    <div className="form-input-field">
+                      <Field
+                        as="select"
+                        id="animeSeriesType"
+                        name="animeSeriesType"
+                        disabled={!isValidated || isTesting}
+                      >
+                        <option value="standard">Standard</option>
+                        <option value="anime">Anime</option>
+                      </Field>
+                    </div>
+                  </div>
+                  {errors.animeSeriesType && touched.animeSeriesType && (
+                    <div className="error">{errors.animeSeriesType}</div>
+                  )}
+                </div>
+                <div className="form-row">
                   <label htmlFor="activeAnimeProfileId" className="text-label">
                     {intl.formatMessage(messages.animequalityprofile)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -751,7 +815,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   <label htmlFor="activeAnimeRootFolder" className="text-label">
                     {intl.formatMessage(messages.animerootfolder)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -790,7 +854,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   >
                     {intl.formatMessage(messages.animelanguageprofile)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -834,8 +898,8 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   <label htmlFor="tags" className="text-label">
                     {intl.formatMessage(messages.animeTags)}
                   </label>
-                  <div className="form-input">
-                    <Select
+                  <div className="form-input-area">
+                    <Select<OptionType, true>
                       options={
                         isValidated
                           ? testResponse.tags.map((tag) => ({
@@ -859,25 +923,29 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                       value={
                         isTesting
                           ? []
-                          : values.animeTags.map((tagId) => {
-                              const foundTag = testResponse.tags.find(
-                                (tag) => tag.id === tagId
-                              );
-                              return {
-                                value: foundTag?.id,
-                                label: foundTag?.label,
-                              };
-                            })
+                          : (values.animeTags
+                              .map((tagId) => {
+                                const foundTag = testResponse.tags.find(
+                                  (tag) => tag.id === tagId
+                                );
+
+                                if (!foundTag) {
+                                  return undefined;
+                                }
+
+                                return {
+                                  value: foundTag.id,
+                                  label: foundTag.label,
+                                };
+                              })
+                              .filter(
+                                (option) => option !== undefined
+                              ) as OptionType[])
                       }
-                      onChange={(
-                        value: OptionTypeBase | OptionsType<OptionType> | null
-                      ) => {
-                        if (!Array.isArray(value)) {
-                          return;
-                        }
+                      onChange={(value) => {
                         setFieldValue(
                           'animeTags',
-                          value?.map((option) => option.value)
+                          value.map((option) => option.value)
                         );
                       }}
                       noOptionsMessage={() =>
@@ -893,7 +961,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   >
                     {intl.formatMessage(messages.seasonfolders)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="enableSeasonFolders"
@@ -905,7 +973,7 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   <label htmlFor="externalUrl" className="text-label">
                     {intl.formatMessage(messages.externalUrl)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         id="externalUrl"
@@ -914,16 +982,18 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                         inputMode="url"
                       />
                     </div>
-                    {errors.externalUrl && touched.externalUrl && (
-                      <div className="error">{errors.externalUrl}</div>
-                    )}
+                    {errors.externalUrl &&
+                      touched.externalUrl &&
+                      typeof errors.externalUrl === 'string' && (
+                        <div className="error">{errors.externalUrl}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="syncEnabled" className="checkbox-label">
                     {intl.formatMessage(messages.syncEnabled)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="syncEnabled"
@@ -935,11 +1005,26 @@ const SonarrModal: React.FC<SonarrModalProps> = ({
                   <label htmlFor="enableSearch" className="checkbox-label">
                     {intl.formatMessage(messages.enableSearch)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="enableSearch"
                       name="enableSearch"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <label htmlFor="tagRequests" className="checkbox-label">
+                    {intl.formatMessage(messages.tagRequests)}
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.tagRequestsInfo)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <Field
+                      type="checkbox"
+                      id="tagRequests"
+                      name="tagRequests"
                     />
                   </div>
                 </div>

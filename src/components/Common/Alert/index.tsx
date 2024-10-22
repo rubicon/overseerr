@@ -1,30 +1,32 @@
 import {
-  ExclamationIcon,
+  ExclamationTriangleIcon,
   InformationCircleIcon,
   XCircleIcon,
-} from '@heroicons/react/solid';
-import React from 'react';
+} from '@heroicons/react/24/solid';
 
 interface AlertProps {
   title?: React.ReactNode;
   type?: 'warning' | 'info' | 'error';
+  children?: React.ReactNode;
 }
 
-const Alert: React.FC<AlertProps> = ({ title, children, type }) => {
+const Alert = ({ title, children, type }: AlertProps) => {
   let design = {
-    bgColor: 'bg-yellow-600',
+    bgColor:
+      'border border-yellow-500 backdrop-blur bg-yellow-400 bg-opacity-20',
     titleColor: 'text-yellow-100',
     textColor: 'text-yellow-300',
-    svg: <ExclamationIcon className="w-5 h-5" />,
+    svg: <ExclamationTriangleIcon className="h-5 w-5" />,
   };
 
   switch (type) {
     case 'info':
       design = {
-        bgColor: 'bg-indigo-600',
-        titleColor: 'text-indigo-100',
-        textColor: 'text-indigo-300',
-        svg: <InformationCircleIcon className="w-5 h-5" />,
+        bgColor:
+          'border border-indigo-500 backdrop-blur bg-indigo-400 bg-opacity-20',
+        titleColor: 'text-gray-100',
+        textColor: 'text-gray-300',
+        svg: <InformationCircleIcon className="h-5 w-5" />,
       };
       break;
     case 'error':
@@ -32,13 +34,13 @@ const Alert: React.FC<AlertProps> = ({ title, children, type }) => {
         bgColor: 'bg-red-600',
         titleColor: 'text-red-100',
         textColor: 'text-red-300',
-        svg: <XCircleIcon className="w-5 h-5" />,
+        svg: <XCircleIcon className="h-5 w-5" />,
       };
       break;
   }
 
   return (
-    <div className={`rounded-md p-4 mb-4 ${design.bgColor}`}>
+    <div className={`mb-4 rounded-md p-4 ${design.bgColor}`}>
       <div className="flex">
         <div className={`flex-shrink-0 ${design.titleColor}`}>{design.svg}</div>
         <div className="ml-3">
@@ -48,7 +50,7 @@ const Alert: React.FC<AlertProps> = ({ title, children, type }) => {
             </div>
           )}
           {children && (
-            <div className={`mt-2 first:mt-0 text-sm ${design.textColor}`}>
+            <div className={`mt-2 text-sm first:mt-0 ${design.textColor}`}>
               {children}
             </div>
           )}

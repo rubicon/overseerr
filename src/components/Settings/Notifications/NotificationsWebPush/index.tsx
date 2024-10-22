@@ -1,14 +1,14 @@
-import { BeakerIcon, SaveIcon } from '@heroicons/react/outline';
+import Alert from '@app/components/Common/Alert';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import globalMessages from '@app/i18n/globalMessages';
+import { ArrowDownOnSquareIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR, { mutate } from 'swr';
-import globalMessages from '../../../../i18n/globalMessages';
-import Alert from '../../../Common/Alert';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
 
 const messages = defineMessages({
   agentenabled: 'Enable Agent',
@@ -21,14 +21,16 @@ const messages = defineMessages({
     'In order to receive web push notifications, Overseerr must be served over HTTPS.',
 });
 
-const NotificationsWebPush: React.FC = () => {
+const NotificationsWebPush = () => {
   const intl = useIntl();
   const { addToast, removeToast } = useToasts();
   const [isTesting, setIsTesting] = useState(false);
   const [isHttps, setIsHttps] = useState(false);
-  const { data, error, revalidate } = useSWR(
-    '/api/v1/settings/notifications/webpush'
-  );
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR('/api/v1/settings/notifications/webpush');
 
   useEffect(() => {
     setIsHttps(window.location.protocol.startsWith('https'));
@@ -118,13 +120,13 @@ const NotificationsWebPush: React.FC = () => {
                   {intl.formatMessage(messages.agentenabled)}
                   <span className="label-required">*</span>
                 </label>
-                <div className="form-input">
+                <div className="form-input-area">
                   <Field type="checkbox" id="enabled" name="enabled" />
                 </div>
               </div>
               <div className="actions">
                 <div className="flex justify-end">
-                  <span className="inline-flex ml-3 rounded-md shadow-sm">
+                  <span className="ml-3 inline-flex rounded-md shadow-sm">
                     <Button
                       buttonType="warning"
                       disabled={isSubmitting || isTesting}
@@ -141,13 +143,13 @@ const NotificationsWebPush: React.FC = () => {
                       </span>
                     </Button>
                   </span>
-                  <span className="inline-flex ml-3 rounded-md shadow-sm">
+                  <span className="ml-3 inline-flex rounded-md shadow-sm">
                     <Button
                       buttonType="primary"
                       type="submit"
                       disabled={isSubmitting || isTesting}
                     >
-                      <SaveIcon />
+                      <ArrowDownOnSquareIcon />
                       <span>
                         {isSubmitting
                           ? intl.formatMessage(globalMessages.saving)

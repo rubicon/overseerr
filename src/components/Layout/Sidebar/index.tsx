@@ -1,22 +1,26 @@
+import VersionStatus from '@app/components/Layout/VersionStatus';
+import useClickOutside from '@app/hooks/useClickOutside';
+import { Permission, useUser } from '@app/hooks/useUser';
+import { Transition } from '@headlessui/react';
 import {
   ClockIcon,
   CogIcon,
-  ExclamationIcon,
+  ExclamationTriangleIcon,
+  FilmIcon,
   SparklesIcon,
+  TvIcon,
   UsersIcon,
-  XIcon,
-} from '@heroicons/react/outline';
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { ReactNode, useRef } from 'react';
+import { Fragment, useRef } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
-import useClickOutside from '../../../hooks/useClickOutside';
-import { Permission, useUser } from '../../../hooks/useUser';
-import Transition from '../../Transition';
-import VersionStatus from '../VersionStatus';
 
-const messages = defineMessages({
+export const menuMessages = defineMessages({
   dashboard: 'Discover',
+  browsemovies: 'Movies',
+  browsetv: 'Series',
   requests: 'Requests',
   issues: 'Issues',
   users: 'Users',
@@ -30,33 +34,44 @@ interface SidebarProps {
 
 interface SidebarLinkProps {
   href: string;
-  svgIcon: ReactNode;
-  messagesKey: keyof typeof messages;
+  svgIcon: React.ReactNode;
+  messagesKey: keyof typeof menuMessages;
   activeRegExp: RegExp;
   as?: string;
   requiredPermission?: Permission | Permission[];
   permissionType?: 'and' | 'or';
+  dataTestId?: string;
 }
 
 const SidebarLinks: SidebarLinkProps[] = [
   {
     href: '/',
     messagesKey: 'dashboard',
-    svgIcon: <SparklesIcon className="w-6 h-6 mr-3" />,
-    activeRegExp: /^\/(discover\/?(movies|tv)?)?$/,
+    svgIcon: <SparklesIcon className="mr-3 h-6 w-6" />,
+    activeRegExp: /^\/(discover\/?)?$/,
+  },
+  {
+    href: '/discover/movies',
+    messagesKey: 'browsemovies',
+    svgIcon: <FilmIcon className="mr-3 h-6 w-6" />,
+    activeRegExp: /^\/discover\/movies$/,
+  },
+  {
+    href: '/discover/tv',
+    messagesKey: 'browsetv',
+    svgIcon: <TvIcon className="mr-3 h-6 w-6" />,
+    activeRegExp: /^\/discover\/tv$/,
   },
   {
     href: '/requests',
     messagesKey: 'requests',
-    svgIcon: <ClockIcon className="w-6 h-6 mr-3" />,
+    svgIcon: <ClockIcon className="mr-3 h-6 w-6" />,
     activeRegExp: /^\/requests/,
   },
   {
     href: '/issues',
     messagesKey: 'issues',
-    svgIcon: (
-      <ExclamationIcon className="w-6 h-6 mr-3 text-gray-300 transition duration-150 ease-in-out group-hover:text-gray-100 group-focus:text-gray-300" />
-    ),
+    svgIcon: <ExclamationTriangleIcon className="mr-3 h-6 w-6" />,
     activeRegExp: /^\/issues/,
     requiredPermission: [
       Permission.MANAGE_ISSUES,
@@ -68,20 +83,22 @@ const SidebarLinks: SidebarLinkProps[] = [
   {
     href: '/users',
     messagesKey: 'users',
-    svgIcon: <UsersIcon className="w-6 h-6 mr-3" />,
+    svgIcon: <UsersIcon className="mr-3 h-6 w-6" />,
     activeRegExp: /^\/users/,
     requiredPermission: Permission.MANAGE_USERS,
+    dataTestId: 'sidebar-menu-users',
   },
   {
     href: '/settings',
     messagesKey: 'settings',
-    svgIcon: <CogIcon className="w-6 h-6 mr-3" />,
+    svgIcon: <CogIcon className="mr-3 h-6 w-6" />,
     activeRegExp: /^\/settings/,
-    requiredPermission: Permission.MANAGE_SETTINGS,
+    requiredPermission: Permission.ADMIN,
+    dataTestId: 'sidebar-menu-settings',
   },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
+const Sidebar = ({ open, setClosed }: SidebarProps) => {
   const navRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const intl = useIntl();
@@ -91,9 +108,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
   return (
     <>
       <div className="lg:hidden">
-        <Transition show={open}>
+        <Transition as={Fragment} show={open}>
           <div className="fixed inset-0 z-40 flex">
-            <Transition
+            <Transition.Child
+              as="div"
               enter="transition-opacity ease-linear duration-300"
               enterFrom="opacity-0"
               enterTo="opacity-100"
@@ -104,38 +122,39 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
               <div className="fixed inset-0">
                 <div className="absolute inset-0 bg-gray-900 opacity-90"></div>
               </div>
-            </Transition>
-            <Transition
-              enter="transition ease-in-out duration-300 transform"
+            </Transition.Child>
+            <Transition.Child
+              as="div"
+              enter="transition-transform ease-in-out duration-300"
               enterFrom="-translate-x-full"
               enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
+              leave="transition-transform ease-in-out duration-300"
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
               <>
-                <div className="relative flex flex-col flex-1 w-full max-w-xs bg-gray-800 sidebar">
-                  <div className="absolute top-0 right-0 p-1 sidebar-close-button -mr-14">
+                <div className="sidebar relative flex h-full w-full max-w-xs flex-1 flex-col bg-gray-800">
+                  <div className="sidebar-close-button absolute right-0 -mr-14 p-1">
                     <button
-                      className="flex items-center justify-center w-12 h-12 rounded-full focus:outline-none focus:bg-gray-600"
+                      className="flex h-12 w-12 items-center justify-center rounded-full focus:bg-gray-600 focus:outline-none"
                       aria-label="Close sidebar"
                       onClick={() => setClosed()}
                     >
-                      <XIcon className="w-6 h-6 text-white" />
+                      <XMarkIcon className="h-6 w-6 text-white" />
                     </button>
                   </div>
                   <div
                     ref={navRef}
-                    className="flex flex-col flex-1 h-0 pt-8 pb-8 overflow-y-auto sm:pb-4"
+                    className="flex flex-1 flex-col overflow-y-auto pt-8 pb-8 sm:pb-4"
                   >
-                    <div className="flex items-center flex-shrink-0 px-2">
+                    <div className="flex flex-shrink-0 items-center px-2">
                       <span className="px-4 text-xl text-gray-50">
                         <a href="/">
                           <img src="/logo_full.svg" alt="Logo" />
                         </a>
                       </span>
                     </div>
-                    <nav className="flex-1 px-4 mt-16 space-y-4">
+                    <nav className="mt-16 flex-1 space-y-4 px-4">
                       {SidebarLinks.filter((link) =>
                         link.requiredPermission
                           ? hasPermission(link.requiredPermission, {
@@ -158,7 +177,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
                               }}
                               role="button"
                               tabIndex={0}
-                              className={`flex items-center px-2 py-2 text-base leading-6 font-medium rounded-md text-white focus:outline-none transition ease-in-out duration-150
+                              className={`flex items-center rounded-md px-2 py-2 text-base font-medium leading-6 text-white transition duration-150 ease-in-out focus:outline-none
                                 ${
                                   router.pathname.match(
                                     sidebarLink.activeRegExp
@@ -167,10 +186,11 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
                                     : 'hover:bg-gray-700 focus:bg-gray-700'
                                 }
                               `}
+                              data-testid={`${sidebarLink.dataTestId}-mobile`}
                             >
                               {sidebarLink.svgIcon}
                               {intl.formatMessage(
-                                messages[sidebarLink.messagesKey]
+                                menuMessages[sidebarLink.messagesKey]
                               )}
                             </a>
                           </Link>
@@ -184,27 +204,27 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 w-14">
+                <div className="w-14 flex-shrink-0">
                   {/* <!-- Force sidebar to shrink to fit close icon --> */}
                 </div>
               </>
-            </Transition>
+            </Transition.Child>
           </div>
         </Transition>
       </div>
 
       <div className="fixed top-0 bottom-0 left-0 z-30 hidden lg:flex lg:flex-shrink-0">
-        <div className="flex flex-col w-64 sidebar">
-          <div className="flex flex-col flex-1 h-0">
-            <div className="flex flex-col flex-1 pt-8 pb-4 overflow-y-auto">
-              <div className="flex items-center flex-shrink-0">
+        <div className="sidebar flex w-64 flex-col">
+          <div className="flex h-0 flex-1 flex-col">
+            <div className="flex flex-1 flex-col overflow-y-auto pt-8 pb-4">
+              <div className="flex flex-shrink-0 items-center">
                 <span className="px-4 text-2xl text-gray-50">
                   <a href="/">
                     <img src="/logo_full.svg" alt="Logo" />
                   </a>
                 </span>
               </div>
-              <nav className="flex-1 px-4 mt-16 space-y-4">
+              <nav className="mt-16 flex-1 space-y-4 px-4">
                 {SidebarLinks.filter((link) =>
                   link.requiredPermission
                     ? hasPermission(link.requiredPermission, {
@@ -219,7 +239,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
                       as={sidebarLink.as}
                     >
                       <a
-                        className={`flex group items-center px-2 py-2 text-lg leading-6 font-medium rounded-md text-white focus:outline-none transition ease-in-out duration-150
+                        className={`group flex items-center rounded-md px-2 py-2 text-lg font-medium leading-6 text-white transition duration-150 ease-in-out focus:outline-none
                                 ${
                                   router.pathname.match(
                                     sidebarLink.activeRegExp
@@ -228,9 +248,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setClosed }) => {
                                     : 'hover:bg-gray-700 focus:bg-gray-700'
                                 }
                               `}
+                        data-testid={sidebarLink.dataTestId}
                       >
                         {sidebarLink.svgIcon}
-                        {intl.formatMessage(messages[sidebarLink.messagesKey])}
+                        {intl.formatMessage(
+                          menuMessages[sidebarLink.messagesKey]
+                        )}
                       </a>
                     </Link>
                   );

@@ -1,13 +1,12 @@
-import { BellIcon } from '@heroicons/react/outline';
-import React from 'react';
+import { BellIcon } from '@heroicons/react/24/outline';
 
-const Notifications: React.FC = () => {
+const Notifications = () => {
   return (
     <button
-      className="p-1 text-gray-400 rounded-full hover:bg-gray-500 hover:text-white focus:outline-none focus:ring focus:text-white"
+      className="rounded-full p-1 text-gray-400 hover:bg-gray-500 hover:text-white focus:text-white focus:outline-none focus:ring"
       aria-label="Notifications"
     >
-      <BellIcon className="w-6 h-6" />
+      <BellIcon className="h-6 w-6" />
     </button>
   );
 };

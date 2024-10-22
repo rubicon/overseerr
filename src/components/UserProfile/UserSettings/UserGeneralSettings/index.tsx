@@ -1,28 +1,27 @@
-import { SaveIcon } from '@heroicons/react/outline';
+import Badge from '@app/components/Common/Badge';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import PageTitle from '@app/components/Common/PageTitle';
+import LanguageSelector from '@app/components/LanguageSelector';
+import QuotaSelector from '@app/components/QuotaSelector';
+import RegionSelector from '@app/components/RegionSelector';
+import type { AvailableLocale } from '@app/context/LanguageContext';
+import { availableLanguages } from '@app/context/LanguageContext';
+import useLocale from '@app/hooks/useLocale';
+import useSettings from '@app/hooks/useSettings';
+import { Permission, UserType, useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
+import Error from '@app/pages/_error';
+import { ArrowDownOnSquareIcon } from '@heroicons/react/24/outline';
+import type { UserSettingsGeneralResponse } from '@server/interfaces/api/userSettingsInterfaces';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
-import { UserSettingsGeneralResponse } from '../../../../../server/interfaces/api/userSettingsInterfaces';
-import {
-  availableLanguages,
-  AvailableLocale,
-} from '../../../../context/LanguageContext';
-import useLocale from '../../../../hooks/useLocale';
-import useSettings from '../../../../hooks/useSettings';
-import { Permission, UserType, useUser } from '../../../../hooks/useUser';
-import globalMessages from '../../../../i18n/globalMessages';
-import Error from '../../../../pages/_error';
-import Badge from '../../../Common/Badge';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import PageTitle from '../../../Common/PageTitle';
-import LanguageSelector from '../../../LanguageSelector';
-import QuotaSelector from '../../../QuotaSelector';
-import RegionSelector from '../../../RegionSelector';
+import * as Yup from 'yup';
 
 const messages = defineMessages({
   general: 'General',
@@ -46,23 +45,47 @@ const messages = defineMessages({
   enableOverride: 'Override Global Limit',
   applanguage: 'Display Language',
   languageDefault: 'Default ({language})',
+  discordId: 'Discord User ID',
+  discordIdTip:
+    'The <FindDiscordIdLink>multi-digit ID number</FindDiscordIdLink> associated with your Discord user account',
+  validationDiscordId: 'You must provide a valid Discord user ID',
+  plexwatchlistsyncmovies: 'Auto-Request Movies',
+  plexwatchlistsyncmoviestip:
+    'Automatically request movies on your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink>',
+  plexwatchlistsyncseries: 'Auto-Request Series',
+  plexwatchlistsyncseriestip:
+    'Automatically request series on your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink>',
 });
 
-const UserGeneralSettings: React.FC = () => {
+const UserGeneralSettings = () => {
   const intl = useIntl();
   const { addToast } = useToasts();
   const { locale, setLocale } = useLocale();
   const [movieQuotaEnabled, setMovieQuotaEnabled] = useState(false);
   const [tvQuotaEnabled, setTvQuotaEnabled] = useState(false);
   const router = useRouter();
-  const { user, hasPermission, mutate } = useUser({
+  const {
+    user,
+    hasPermission,
+    revalidate: revalidateUser,
+  } = useUser({
     id: Number(router.query.userId),
   });
   const { user: currentUser, hasPermission: currentHasPermission } = useUser();
   const { currentSettings } = useSettings();
-  const { data, error, revalidate } = useSWR<UserSettingsGeneralResponse>(
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<UserSettingsGeneralResponse>(
     user ? `/api/v1/user/${user?.id}/settings/main` : null
   );
+
+  const UserGeneralSettingsSchema = Yup.object().shape({
+    discordId: Yup.string()
+      .nullable()
+      .matches(/^\d{17,19}$/, intl.formatMessage(messages.validationDiscordId)),
+  });
 
   useEffect(() => {
     setMovieQuotaEnabled(
@@ -96,20 +119,26 @@ const UserGeneralSettings: React.FC = () => {
       </div>
       <Formik
         initialValues={{
-          locale: data?.locale,
           displayName: data?.username,
+          discordId: data?.discordId,
+          locale: data?.locale,
           region: data?.region,
           originalLanguage: data?.originalLanguage,
           movieQuotaLimit: data?.movieQuotaLimit,
           movieQuotaDays: data?.movieQuotaDays,
           tvQuotaLimit: data?.tvQuotaLimit,
           tvQuotaDays: data?.tvQuotaDays,
+          watchlistSyncMovies: data?.watchlistSyncMovies,
+          watchlistSyncTv: data?.watchlistSyncTv,
         }}
+        validationSchema={UserGeneralSettingsSchema}
         enableReinitialize
         onSubmit={async (values) => {
           try {
             await axios.post(`/api/v1/user/${user?.id}/settings/main`, {
               username: values.displayName,
+              discordId: values.discordId,
+              locale: values.locale,
               region: values.region,
               originalLanguage: values.originalLanguage,
               movieQuotaLimit: movieQuotaEnabled
@@ -118,7 +147,8 @@ const UserGeneralSettings: React.FC = () => {
               movieQuotaDays: movieQuotaEnabled ? values.movieQuotaDays : null,
               tvQuotaLimit: tvQuotaEnabled ? values.tvQuotaLimit : null,
               tvQuotaDays: tvQuotaEnabled ? values.tvQuotaDays : null,
-              locale: values.locale,
+              watchlistSyncMovies: values.watchlistSyncMovies,
+              watchlistSyncTv: values.watchlistSyncTv,
             });
 
             if (currentUser?.id === user?.id && setLocale) {
@@ -140,11 +170,18 @@ const UserGeneralSettings: React.FC = () => {
             });
           } finally {
             revalidate();
-            mutate();
+            revalidateUser();
           }
         }}
       >
-        {({ errors, touched, isSubmitting, values, setFieldValue }) => {
+        {({
+          errors,
+          touched,
+          isSubmitting,
+          isValid,
+          values,
+          setFieldValue,
+        }) => {
           return (
             <Form className="section">
               <div className="form-row">
@@ -152,7 +189,7 @@ const UserGeneralSettings: React.FC = () => {
                   {intl.formatMessage(messages.accounttype)}
                 </label>
                 <div className="mb-1 text-sm font-medium leading-5 text-gray-400 sm:mt-2">
-                  <div className="flex items-center max-w-lg">
+                  <div className="flex max-w-lg items-center">
                     {user?.userType === UserType.PLEX ? (
                       <Badge badgeType="warning">
                         {intl.formatMessage(messages.plexuser)}
@@ -170,7 +207,7 @@ const UserGeneralSettings: React.FC = () => {
                   {intl.formatMessage(messages.role)}
                 </label>
                 <div className="mb-1 text-sm font-medium leading-5 text-gray-400 sm:mt-2">
-                  <div className="flex items-center max-w-lg">
+                  <div className="flex max-w-lg items-center">
                     {user?.id === 1
                       ? intl.formatMessage(messages.owner)
                       : hasPermission(Permission.ADMIN)
@@ -183,7 +220,7 @@ const UserGeneralSettings: React.FC = () => {
                 <label htmlFor="displayName" className="text-label">
                   {intl.formatMessage(messages.displayName)}
                 </label>
-                <div className="form-input">
+                <div className="form-input-area">
                   <div className="form-input-field">
                     <Field
                       id="displayName"
@@ -194,16 +231,48 @@ const UserGeneralSettings: React.FC = () => {
                       }
                     />
                   </div>
-                  {errors.displayName && touched.displayName && (
-                    <div className="error">{errors.displayName}</div>
+                  {errors.displayName &&
+                    touched.displayName &&
+                    typeof errors.displayName === 'string' && (
+                      <div className="error">{errors.displayName}</div>
+                    )}
+                </div>
+              </div>
+              <div className="form-row">
+                <label htmlFor="discordId" className="text-label">
+                  {intl.formatMessage(messages.discordId)}
+                  {currentUser?.id === user?.id && (
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.discordIdTip, {
+                        FindDiscordIdLink: (msg: React.ReactNode) => (
+                          <a
+                            href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {msg}
+                          </a>
+                        ),
+                      })}
+                    </span>
                   )}
+                </label>
+                <div className="form-input-area">
+                  <div className="form-input-field">
+                    <Field id="discordId" name="discordId" type="text" />
+                  </div>
+                  {errors.discordId &&
+                    touched.discordId &&
+                    typeof errors.discordId === 'string' && (
+                      <div className="error">{errors.discordId}</div>
+                    )}
                 </div>
               </div>
               <div className="form-row">
                 <label htmlFor="locale" className="text-label">
                   {intl.formatMessage(messages.applanguage)}
                 </label>
-                <div className="form-input">
+                <div className="form-input-area">
                   <div className="form-input-field">
                     <Field as="select" id="locale" name="locale">
                       <option value="" lang={locale}>
@@ -236,7 +305,7 @@ const UserGeneralSettings: React.FC = () => {
                     {intl.formatMessage(messages.regionTip)}
                   </span>
                 </label>
-                <div className="form-input">
+                <div className="form-input-area">
                   <div className="form-input-field">
                     <RegionSelector
                       name="region"
@@ -254,7 +323,7 @@ const UserGeneralSettings: React.FC = () => {
                     {intl.formatMessage(messages.originallanguageTip)}
                   </span>
                 </label>
-                <div className="form-input">
+                <div className="form-input-area">
                   <div className="form-input-field">
                     <LanguageSelector
                       setFieldValue={setFieldValue}
@@ -274,9 +343,9 @@ const UserGeneralSettings: React.FC = () => {
                           {intl.formatMessage(messages.movierequestlimit)}
                         </span>
                       </label>
-                      <div className="form-input">
+                      <div className="form-input-area">
                         <div className="flex flex-col">
-                          <div className="flex items-center mb-4">
+                          <div className="mb-4 flex items-center">
                             <input
                               type="checkbox"
                               checked={movieQuotaEnabled}
@@ -314,9 +383,9 @@ const UserGeneralSettings: React.FC = () => {
                           {intl.formatMessage(messages.seriesrequestlimit)}
                         </span>
                       </label>
-                      <div className="form-input">
+                      <div className="form-input-area">
                         <div className="flex flex-col">
-                          <div className="flex items-center mb-4">
+                          <div className="mb-4 flex items-center">
                             <input
                               type="checkbox"
                               checked={tvQuotaEnabled}
@@ -350,15 +419,108 @@ const UserGeneralSettings: React.FC = () => {
                     </div>
                   </>
                 )}
+              {hasPermission(
+                [Permission.AUTO_REQUEST, Permission.AUTO_REQUEST_MOVIE],
+                { type: 'or' }
+              ) &&
+                user?.userType === UserType.PLEX && (
+                  <div className="form-row">
+                    <label
+                      htmlFor="watchlistSyncMovies"
+                      className="checkbox-label"
+                    >
+                      <span>
+                        {intl.formatMessage(messages.plexwatchlistsyncmovies)}
+                      </span>
+                      <span className="label-tip">
+                        {intl.formatMessage(
+                          messages.plexwatchlistsyncmoviestip,
+                          {
+                            PlexWatchlistSupportLink: (
+                              msg: React.ReactNode
+                            ) => (
+                              <a
+                                href="https://support.plex.tv/articles/universal-watchlist/"
+                                className="text-white transition duration-300 hover:underline"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {msg}
+                              </a>
+                            ),
+                          }
+                        )}
+                      </span>
+                    </label>
+                    <div className="form-input-area">
+                      <Field
+                        type="checkbox"
+                        id="watchlistSyncMovies"
+                        name="watchlistSyncMovies"
+                        onChange={() => {
+                          setFieldValue(
+                            'watchlistSyncMovies',
+                            !values.watchlistSyncMovies
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              {hasPermission(
+                [Permission.AUTO_REQUEST, Permission.AUTO_REQUEST_TV],
+                { type: 'or' }
+              ) &&
+                user?.userType === UserType.PLEX && (
+                  <div className="form-row">
+                    <label htmlFor="watchlistSyncTv" className="checkbox-label">
+                      <span>
+                        {intl.formatMessage(messages.plexwatchlistsyncseries)}
+                      </span>
+                      <span className="label-tip">
+                        {intl.formatMessage(
+                          messages.plexwatchlistsyncseriestip,
+                          {
+                            PlexWatchlistSupportLink: (
+                              msg: React.ReactNode
+                            ) => (
+                              <a
+                                href="https://support.plex.tv/articles/universal-watchlist/"
+                                className="text-white transition duration-300 hover:underline"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {msg}
+                              </a>
+                            ),
+                          }
+                        )}
+                      </span>
+                    </label>
+                    <div className="form-input-area">
+                      <Field
+                        type="checkbox"
+                        id="watchlistSyncTv"
+                        name="watchlistSyncTv"
+                        onChange={() => {
+                          setFieldValue(
+                            'watchlistSyncTv',
+                            !values.watchlistSyncTv
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               <div className="actions">
                 <div className="flex justify-end">
-                  <span className="inline-flex ml-3 rounded-md shadow-sm">
+                  <span className="ml-3 inline-flex rounded-md shadow-sm">
                     <Button
                       buttonType="primary"
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !isValid}
                     >
-                      <SaveIcon />
+                      <ArrowDownOnSquareIcon />
                       <span>
                         {isSubmitting
                           ? intl.formatMessage(globalMessages.saving)

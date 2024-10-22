@@ -1,18 +1,17 @@
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import SensitiveInput from '@app/components/Common/SensitiveInput';
+import NotificationTypeSelector from '@app/components/NotificationTypeSelector';
+import { useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
+import type { UserSettingsNotificationsResponse } from '@server/interfaces/api/userSettingsInterfaces';
 import axios from 'axios';
 import { Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
-import React from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
 import * as Yup from 'yup';
-import { UserSettingsNotificationsResponse } from '../../../../../server/interfaces/api/userSettingsInterfaces';
-import { useUser } from '../../../../hooks/useUser';
-import globalMessages from '../../../../i18n/globalMessages';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import SensitiveInput from '../../../Common/SensitiveInput';
-import NotificationTypeSelector from '../../../NotificationTypeSelector';
 
 const messages = defineMessages({
   pushbulletsettingssaved:
@@ -24,12 +23,16 @@ const messages = defineMessages({
   validationPushbulletAccessToken: 'You must provide an access token',
 });
 
-const UserPushbulletSettings: React.FC = () => {
+const UserPushbulletSettings = () => {
   const intl = useIntl();
   const { addToast } = useToasts();
   const router = useRouter();
   const { user } = useUser({ id: Number(router.query.userId) });
-  const { data, error, revalidate } = useSWR<UserSettingsNotificationsResponse>(
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<UserSettingsNotificationsResponse>(
     user ? `/api/v1/user/${user?.id}/settings/notifications` : null
   );
 
@@ -101,25 +104,21 @@ const UserPushbulletSettings: React.FC = () => {
                 {data?.pushbulletAccessToken && (
                   <span className="label-tip">
                     {intl.formatMessage(messages.pushbulletAccessTokenTip, {
-                      PushbulletSettingsLink: function PushbulletSettingsLink(
-                        msg
-                      ) {
-                        return (
-                          <a
-                            href="https://www.pushbullet.com/#settings/account"
-                            className="text-white transition duration-300 hover:underline"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {msg}
-                          </a>
-                        );
-                      },
+                      PushbulletSettingsLink: (msg: React.ReactNode) => (
+                        <a
+                          href="https://www.pushbullet.com/#settings/account"
+                          className="text-white transition duration-300 hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {msg}
+                        </a>
+                      ),
                     })}
                   </span>
                 )}
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <SensitiveInput
                     as="field"
@@ -149,7 +148,7 @@ const UserPushbulletSettings: React.FC = () => {
             />
             <div className="actions">
               <div className="flex justify-end">
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="primary"
                     type="submit"

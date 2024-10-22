@@ -1,19 +1,17 @@
-import { TranslateIcon } from '@heroicons/react/solid';
-import React, { useRef, useState } from 'react';
+import type { AvailableLocale } from '@app/context/LanguageContext';
+import { availableLanguages } from '@app/context/LanguageContext';
+import useClickOutside from '@app/hooks/useClickOutside';
+import useLocale from '@app/hooks/useLocale';
+import { Transition } from '@headlessui/react';
+import { LanguageIcon } from '@heroicons/react/24/solid';
+import { useRef, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
-import {
-  availableLanguages,
-  AvailableLocale,
-} from '../../../context/LanguageContext';
-import useClickOutside from '../../../hooks/useClickOutside';
-import useLocale from '../../../hooks/useLocale';
-import Transition from '../../Transition';
 
 const messages = defineMessages({
   displaylanguage: 'Display Language',
 });
 
-const LanguagePicker: React.FC = () => {
+const LanguagePicker = () => {
   const intl = useIntl();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { locale, setLocale } = useLocale();
@@ -24,29 +22,30 @@ const LanguagePicker: React.FC = () => {
     <div className="relative">
       <div>
         <button
-          className={`p-1 rounded-full sm:p-2 hover:bg-gray-600 hover:text-white focus:outline-none focus:bg-gray-600 focus:ring-1 focus:ring-gray-500 focus:text-white ${
+          className={`rounded-full p-1 hover:bg-gray-600 hover:text-white focus:bg-gray-600 focus:text-white focus:outline-none focus:ring-1 focus:ring-gray-500 sm:p-2 ${
             isDropdownOpen ? 'bg-gray-600 text-white' : 'text-gray-400'
           }`}
           aria-label="Language Picker"
           onClick={() => setDropdownOpen(true)}
         >
-          <TranslateIcon className="w-6 h-6" />
+          <LanguageIcon className="h-6 w-6" />
         </button>
       </div>
       <Transition
+        as="div"
         show={isDropdownOpen}
-        enter="transition ease-out duration-100 opacity-0"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-75 opacity-100"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
+        enter="transition ease-out duration-100"
+        enterFrom="opacity-0 scale-95"
+        enterTo="opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="opacity-100 scale-100"
+        leaveTo="opacity-0 scale-95"
       >
         <div
-          className="absolute right-0 w-56 mt-2 origin-top-right rounded-md shadow-lg"
+          className="absolute right-0 mt-2 w-56 origin-top-right rounded-md shadow-lg"
           ref={dropdownRef}
         >
-          <div className="px-3 py-2 bg-gray-700 rounded-md ring-1 ring-black ring-opacity-5">
+          <div className="rounded-md bg-gray-700 px-3 py-2 ring-1 ring-black ring-opacity-5">
             <div>
               <label
                 htmlFor="language"

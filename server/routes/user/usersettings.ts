@@ -1,16 +1,16 @@
-import { Router } from 'express';
-import { getRepository } from 'typeorm';
-import { canMakePermissionsChange } from '.';
-import { User } from '../../entity/User';
-import { UserSettings } from '../../entity/UserSettings';
-import {
+import { getRepository } from '@server/datasource';
+import { User } from '@server/entity/User';
+import { UserSettings } from '@server/entity/UserSettings';
+import type {
   UserSettingsGeneralResponse,
   UserSettingsNotificationsResponse,
-} from '../../interfaces/api/userSettingsInterfaces';
-import { Permission } from '../../lib/permissions';
-import { getSettings } from '../../lib/settings';
-import logger from '../../logger';
-import { isAuthenticated } from '../../middleware/auth';
+} from '@server/interfaces/api/userSettingsInterfaces';
+import { Permission } from '@server/lib/permissions';
+import { getSettings } from '@server/lib/settings';
+import logger from '@server/logger';
+import { isAuthenticated } from '@server/middleware/auth';
+import { Router } from 'express';
+import { canMakePermissionsChange } from '.';
 
 const isOwnProfileOrAdmin = (): Middleware => {
   const authMiddleware: Middleware = (req, res, next) => {
@@ -51,6 +51,7 @@ userSettingsRoutes.get<{ id: string }, UserSettingsGeneralResponse>(
 
       return res.status(200).json({
         username: user.username,
+        discordId: user.settings?.discordId,
         locale: user.settings?.locale,
         region: user.settings?.region,
         originalLanguage: user.settings?.originalLanguage,
@@ -62,6 +63,8 @@ userSettingsRoutes.get<{ id: string }, UserSettingsGeneralResponse>(
         globalMovieQuotaLimit: defaultQuotas.movie.quotaLimit,
         globalTvQuotaDays: defaultQuotas.tv.quotaDays,
         globalTvQuotaLimit: defaultQuotas.tv.quotaLimit,
+        watchlistSyncMovies: user.settings?.watchlistSyncMovies,
+        watchlistSyncTv: user.settings?.watchlistSyncTv,
       });
     } catch (e) {
       next({ status: 500, message: e.message });
@@ -109,23 +112,32 @@ userSettingsRoutes.post<
     if (!user.settings) {
       user.settings = new UserSettings({
         user: req.user,
+        discordId: req.body.discordId,
         locale: req.body.locale,
         region: req.body.region,
         originalLanguage: req.body.originalLanguage,
+        watchlistSyncMovies: req.body.watchlistSyncMovies,
+        watchlistSyncTv: req.body.watchlistSyncTv,
       });
     } else {
+      user.settings.discordId = req.body.discordId;
       user.settings.locale = req.body.locale;
       user.settings.region = req.body.region;
       user.settings.originalLanguage = req.body.originalLanguage;
+      user.settings.watchlistSyncMovies = req.body.watchlistSyncMovies;
+      user.settings.watchlistSyncTv = req.body.watchlistSyncTv;
     }
 
     await userRepository.save(user);
 
     return res.status(200).json({
       username: user.username,
-      region: user.settings.region,
+      discordId: user.settings.discordId,
       locale: user.settings.locale,
+      region: user.settings.region,
       originalLanguage: user.settings.originalLanguage,
+      watchlistSyncMovies: user.settings.watchlistSyncMovies,
+      watchlistSyncTv: user.settings.watchlistSyncTv,
     });
   } catch (e) {
     next({ status: 500, message: e.message });
@@ -250,7 +262,7 @@ userSettingsRoutes.get<{ id: string }, UserSettingsNotificationsResponse>(
       }
 
       return res.status(200).json({
-        emailEnabled: settings?.email.enabled,
+        emailEnabled: settings.email.enabled,
         pgpKey: user.settings?.pgpKey,
         discordEnabled:
           settings?.discord.enabled && settings.discord.options.enableMentions,
@@ -262,11 +274,12 @@ userSettingsRoutes.get<{ id: string }, UserSettingsNotificationsResponse>(
         pushbulletAccessToken: user.settings?.pushbulletAccessToken,
         pushoverApplicationToken: user.settings?.pushoverApplicationToken,
         pushoverUserKey: user.settings?.pushoverUserKey,
-        telegramEnabled: settings?.telegram.enabled,
-        telegramBotUsername: settings?.telegram.options.botUsername,
+        pushoverSound: user.settings?.pushoverSound,
+        telegramEnabled: settings.telegram.enabled,
+        telegramBotUsername: settings.telegram.options.botUsername,
         telegramChatId: user.settings?.telegramChatId,
-        telegramSendSilently: user?.settings?.telegramSendSilently,
-        webPushEnabled: settings?.webpush.enabled,
+        telegramSendSilently: user.settings?.telegramSendSilently,
+        webPushEnabled: settings.webpush.enabled,
         notificationTypes: user.settings?.notificationTypes ?? {},
       });
     } catch (e) {
@@ -317,6 +330,7 @@ userSettingsRoutes.post<{ id: string }, UserSettingsNotificationsResponse>(
         user.settings.pushoverApplicationToken =
           req.body.pushoverApplicationToken;
         user.settings.pushoverUserKey = req.body.pushoverUserKey;
+        user.settings.pushoverSound = req.body.pushoverSound;
         user.settings.telegramChatId = req.body.telegramChatId;
         user.settings.telegramSendSilently = req.body.telegramSendSilently;
         user.settings.notificationTypes = Object.assign(
@@ -329,13 +343,14 @@ userSettingsRoutes.post<{ id: string }, UserSettingsNotificationsResponse>(
       userRepository.save(user);
 
       return res.status(200).json({
-        pgpKey: user.settings?.pgpKey,
-        discordId: user.settings?.discordId,
-        pushbulletAccessToken: user.settings?.pushbulletAccessToken,
-        pushoverApplicationToken: user.settings?.pushoverApplicationToken,
-        pushoverUserKey: user.settings?.pushoverUserKey,
-        telegramChatId: user.settings?.telegramChatId,
-        telegramSendSilently: user?.settings?.telegramSendSilently,
+        pgpKey: user.settings.pgpKey,
+        discordId: user.settings.discordId,
+        pushbulletAccessToken: user.settings.pushbulletAccessToken,
+        pushoverApplicationToken: user.settings.pushoverApplicationToken,
+        pushoverUserKey: user.settings.pushoverUserKey,
+        pushoverSound: user.settings.pushoverSound,
+        telegramChatId: user.settings.telegramChatId,
+        telegramSendSilently: user.settings.telegramSendSilently,
         notificationTypes: user.settings.notificationTypes,
       });
     } catch (e) {

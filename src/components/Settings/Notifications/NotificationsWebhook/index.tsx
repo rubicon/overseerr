@@ -1,20 +1,25 @@
-import { BeakerIcon, SaveIcon } from '@heroicons/react/outline';
-import { QuestionMarkCircleIcon, RefreshIcon } from '@heroicons/react/solid';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import NotificationTypeSelector from '@app/components/NotificationTypeSelector';
+import globalMessages from '@app/i18n/globalMessages';
+import { ArrowDownOnSquareIcon, BeakerIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon,
+  QuestionMarkCircleIcon,
+} from '@heroicons/react/24/solid';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
 import * as Yup from 'yup';
-import globalMessages from '../../../../i18n/globalMessages';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import NotificationTypeSelector from '../../../NotificationTypeSelector';
 
-const JSONEditor = dynamic(() => import('../../../JSONEditor'), { ssr: false });
+const JSONEditor = dynamic(() => import('@app/components/JSONEditor'), {
+  ssr: false,
+});
 
 const defaultPayload = {
   notification_type: '{{notification_type}}',
@@ -34,6 +39,9 @@ const defaultPayload = {
     requestedBy_email: '{{requestedBy_email}}',
     requestedBy_username: '{{requestedBy_username}}',
     requestedBy_avatar: '{{requestedBy_avatar}}',
+    requestedBy_settings_discordId: '{{requestedBy_settings_discordId}}',
+    requestedBy_settings_telegramChatId:
+      '{{requestedBy_settings_telegramChatId}}',
   },
   '{{issue}}': {
     issue_id: '{{issue_id}}',
@@ -42,12 +50,18 @@ const defaultPayload = {
     reportedBy_email: '{{reportedBy_email}}',
     reportedBy_username: '{{reportedBy_username}}',
     reportedBy_avatar: '{{reportedBy_avatar}}',
+    reportedBy_settings_discordId: '{{reportedBy_settings_discordId}}',
+    reportedBy_settings_telegramChatId:
+      '{{reportedBy_settings_telegramChatId}}',
   },
   '{{comment}}': {
     comment_message: '{{comment_message}}',
     commentedBy_email: '{{commentedBy_email}}',
     commentedBy_username: '{{commentedBy_username}}',
     commentedBy_avatar: '{{commentedBy_avatar}}',
+    commentedBy_settings_discordId: '{{commentedBy_settings_discordId}}',
+    commentedBy_settings_telegramChatId:
+      '{{commentedBy_settings_telegramChatId}}',
   },
   '{{extra}}': [],
 };
@@ -70,13 +84,15 @@ const messages = defineMessages({
   validationTypes: 'You must select at least one notification type',
 });
 
-const NotificationsWebhook: React.FC = () => {
+const NotificationsWebhook = () => {
   const intl = useIntl();
   const { addToast, removeToast } = useToasts();
   const [isTesting, setIsTesting] = useState(false);
-  const { data, error, revalidate } = useSWR(
-    '/api/v1/settings/notifications/webhook'
-  );
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR('/api/v1/settings/notifications/webhook');
 
   const NotificationsWebhookSchema = Yup.object().shape({
     webhookUrl: Yup.string()
@@ -224,7 +240,7 @@ const NotificationsWebhook: React.FC = () => {
                 {intl.formatMessage(messages.agentenabled)}
                 <span className="label-required">*</span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <Field type="checkbox" id="enabled" name="enabled" />
               </div>
             </div>
@@ -233,7 +249,7 @@ const NotificationsWebhook: React.FC = () => {
                 {intl.formatMessage(messages.webhookUrl)}
                 <span className="label-required">*</span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <Field
                     id="webhookUrl"
@@ -242,16 +258,18 @@ const NotificationsWebhook: React.FC = () => {
                     inputMode="url"
                   />
                 </div>
-                {errors.webhookUrl && touched.webhookUrl && (
-                  <div className="error">{errors.webhookUrl}</div>
-                )}
+                {errors.webhookUrl &&
+                  touched.webhookUrl &&
+                  typeof errors.webhookUrl === 'string' && (
+                    <div className="error">{errors.webhookUrl}</div>
+                  )}
               </div>
             </div>
             <div className="form-row">
               <label htmlFor="authHeader" className="text-label">
                 {intl.formatMessage(messages.authheader)}
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <Field id="authHeader" name="authHeader" type="text" />
                 </div>
@@ -262,7 +280,7 @@ const NotificationsWebhook: React.FC = () => {
                 {intl.formatMessage(messages.customJson)}
                 <span className="label-required">*</span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <JSONEditor
                     name="webhook-json-payload"
@@ -271,9 +289,11 @@ const NotificationsWebhook: React.FC = () => {
                     onBlur={() => setFieldTouched('jsonPayload')}
                   />
                 </div>
-                {errors.jsonPayload && touched.jsonPayload && (
-                  <div className="error">{errors.jsonPayload}</div>
-                )}
+                {errors.jsonPayload &&
+                  touched.jsonPayload &&
+                  typeof errors.jsonPayload === 'string' && (
+                    <div className="error">{errors.jsonPayload}</div>
+                  )}
                 <div className="mt-2">
                   <Button
                     buttonSize="sm"
@@ -283,7 +303,7 @@ const NotificationsWebhook: React.FC = () => {
                     }}
                     className="mr-2"
                   >
-                    <RefreshIcon />
+                    <ArrowPathIcon />
                     <span>{intl.formatMessage(messages.resetPayload)}</span>
                   </Button>
                   <Link
@@ -323,7 +343,7 @@ const NotificationsWebhook: React.FC = () => {
             />
             <div className="actions">
               <div className="flex justify-end">
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="warning"
                     disabled={isSubmitting || !isValid || isTesting}
@@ -340,7 +360,7 @@ const NotificationsWebhook: React.FC = () => {
                     </span>
                   </Button>
                 </span>
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="primary"
                     type="submit"
@@ -351,7 +371,7 @@ const NotificationsWebhook: React.FC = () => {
                       (values.enabled && !values.types)
                     }
                   >
-                    <SaveIcon />
+                    <ArrowDownOnSquareIcon />
                     <span>
                       {isSubmitting
                         ? intl.formatMessage(globalMessages.saving)

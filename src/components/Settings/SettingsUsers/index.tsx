@@ -1,17 +1,16 @@
-import { SaveIcon } from '@heroicons/react/outline';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import PageTitle from '@app/components/Common/PageTitle';
+import PermissionEdit from '@app/components/PermissionEdit';
+import QuotaSelector from '@app/components/QuotaSelector';
+import globalMessages from '@app/i18n/globalMessages';
+import { ArrowDownOnSquareIcon } from '@heroicons/react/24/outline';
+import type { MainSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
-import React from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR, { mutate } from 'swr';
-import type { MainSettings } from '../../../../server/lib/settings';
-import globalMessages from '../../../i18n/globalMessages';
-import Button from '../../Common/Button';
-import LoadingSpinner from '../../Common/LoadingSpinner';
-import PageTitle from '../../Common/PageTitle';
-import PermissionEdit from '../../PermissionEdit';
-import QuotaSelector from '../../QuotaSelector';
 
 const messages = defineMessages({
   users: 'Users',
@@ -30,12 +29,14 @@ const messages = defineMessages({
   defaultPermissionsTip: 'Initial permissions assigned to new users',
 });
 
-const SettingsUsers: React.FC = () => {
+const SettingsUsers = () => {
   const { addToast } = useToasts();
   const intl = useIntl();
-  const { data, error, revalidate } = useSWR<MainSettings>(
-    '/api/v1/settings/main'
-  );
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<MainSettings>('/api/v1/settings/main');
 
   if (!data && !error) {
     return <LoadingSpinner />;
@@ -110,7 +111,7 @@ const SettingsUsers: React.FC = () => {
                       {intl.formatMessage(messages.localLoginTip)}
                     </span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="localLogin"
@@ -128,7 +129,7 @@ const SettingsUsers: React.FC = () => {
                       {intl.formatMessage(messages.newPlexLoginTip)}
                     </span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="newPlexLogin"
@@ -143,7 +144,7 @@ const SettingsUsers: React.FC = () => {
                   <label htmlFor="applicationTitle" className="text-label">
                     {intl.formatMessage(messages.movieRequestLimitLabel)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <QuotaSelector
                       onChange={setFieldValue}
                       dayFieldName="movieQuotaDays"
@@ -158,7 +159,7 @@ const SettingsUsers: React.FC = () => {
                   <label htmlFor="applicationTitle" className="text-label">
                     {intl.formatMessage(messages.tvRequestLimitLabel)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <QuotaSelector
                       onChange={setFieldValue}
                       dayFieldName="tvQuotaDays"
@@ -181,7 +182,7 @@ const SettingsUsers: React.FC = () => {
                         {intl.formatMessage(messages.defaultPermissionsTip)}
                       </span>
                     </span>
-                    <div className="form-input">
+                    <div className="form-input-area">
                       <div className="max-w-lg">
                         <PermissionEdit
                           currentPermission={values.defaultPermissions}
@@ -195,13 +196,13 @@ const SettingsUsers: React.FC = () => {
                 </div>
                 <div className="actions">
                   <div className="flex justify-end">
-                    <span className="inline-flex ml-3 rounded-md shadow-sm">
+                    <span className="ml-3 inline-flex rounded-md shadow-sm">
                       <Button
                         buttonType="primary"
                         type="submit"
                         disabled={isSubmitting}
                       >
-                        <SaveIcon />
+                        <ArrowDownOnSquareIcon />
                         <span>
                           {isSubmitting
                             ? intl.formatMessage(globalMessages.saving)

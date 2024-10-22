@@ -1,19 +1,18 @@
-import { SaveIcon } from '@heroicons/react/outline';
+import Alert from '@app/components/Common/Alert';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import PageTitle from '@app/components/Common/PageTitle';
+import PermissionEdit from '@app/components/PermissionEdit';
+import { useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
+import Error from '@app/pages/_error';
+import { ArrowDownOnSquareIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
-import React from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
-import { useUser } from '../../../../hooks/useUser';
-import globalMessages from '../../../../i18n/globalMessages';
-import Error from '../../../../pages/_error';
-import Alert from '../../../Common/Alert';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import PageTitle from '../../../Common/PageTitle';
-import PermissionEdit from '../../../PermissionEdit';
 
 const messages = defineMessages({
   toastSettingsSuccess: 'Permissions saved successfully!',
@@ -22,13 +21,19 @@ const messages = defineMessages({
   unauthorizedDescription: 'You cannot modify your own permissions.',
 });
 
-const UserPermissions: React.FC = () => {
+const UserPermissions = () => {
   const intl = useIntl();
   const { addToast } = useToasts();
   const router = useRouter();
   const { user: currentUser } = useUser();
-  const { user, mutate } = useUser({ id: Number(router.query.userId) });
-  const { data, error, revalidate } = useSWR<{ permissions?: number }>(
+  const { user, revalidate: revalidateUser } = useUser({
+    id: Number(router.query.userId),
+  });
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<{ permissions?: number }>(
     user ? `/api/v1/user/${user?.id}/settings/permissions` : null
   );
 
@@ -90,7 +95,7 @@ const UserPermissions: React.FC = () => {
             });
           } finally {
             revalidate();
-            mutate();
+            revalidateUser();
           }
         }}
       >
@@ -109,13 +114,13 @@ const UserPermissions: React.FC = () => {
               </div>
               <div className="actions">
                 <div className="flex justify-end">
-                  <span className="inline-flex ml-3 rounded-md shadow-sm">
+                  <span className="ml-3 inline-flex rounded-md shadow-sm">
                     <Button
                       buttonType="primary"
                       type="submit"
                       disabled={isSubmitting}
                     >
-                      <SaveIcon />
+                      <ArrowDownOnSquareIcon />
                       <span>
                         {isSubmitting
                           ? intl.formatMessage(globalMessages.saving)

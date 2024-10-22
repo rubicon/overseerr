@@ -1,8 +1,10 @@
-import axios, { AxiosInstance } from 'axios';
+import type { PlexDevice } from '@server/interfaces/api/plexInterfaces';
+import cacheManager from '@server/lib/cache';
+import { getSettings } from '@server/lib/settings';
+import logger from '@server/logger';
+import { randomUUID } from 'node:crypto';
 import xml2js from 'xml2js';
-import { PlexDevice } from '../interfaces/api/plexInterfaces';
-import { getSettings } from '../lib/settings';
-import logger from '../logger';
+import ExternalAPI from './externalapi';
 
 interface PlexAccountResponse {
   user: PlexUser;
@@ -81,21 +83,6 @@ interface ServerResponse {
   };
 }
 
-interface FriendResponse {
-  MediaContainer: {
-    User: {
-      $: {
-        id: string;
-        title: string;
-        username: string;
-        email: string;
-        thumb: string;
-      };
-      Server?: ServerResponse[];
-    }[];
-  };
-}
-
 interface UsersResponse {
   MediaContainer: {
     User: {
@@ -111,20 +98,59 @@ interface UsersResponse {
   };
 }
 
-class PlexTvAPI {
+interface WatchlistResponse {
+  MediaContainer: {
+    totalSize: number;
+    Metadata?: {
+      ratingKey: string;
+    }[];
+  };
+}
+
+interface MetadataResponse {
+  MediaContainer: {
+    Metadata: {
+      ratingKey: string;
+      type: 'movie' | 'show';
+      title: string;
+      Guid: {
+        id: `imdb://tt${number}` | `tmdb://${number}` | `tvdb://${number}`;
+      }[];
+    }[];
+  };
+}
+
+export interface PlexWatchlistItem {
+  ratingKey: string;
+  tmdbId: number;
+  tvdbId?: number;
+  type: 'movie' | 'show';
+  title: string;
+}
+
+export interface PlexWatchlistCache {
+  etag: string;
+  response: WatchlistResponse;
+}
+
+class PlexTvAPI extends ExternalAPI {
   private authToken: string;
-  private axios: AxiosInstance;
 
   constructor(authToken: string) {
+    super(
+      'https://plex.tv',
+      {},
+      {
+        headers: {
+          'X-Plex-Token': authToken,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        nodeCache: cacheManager.getCache('plextv').data,
+      }
+    );
+
     this.authToken = authToken;
-    this.axios = axios.create({
-      baseURL: 'https://plex.tv',
-      headers: {
-        'X-Plex-Token': this.authToken,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    });
   }
 
   public async getDevices(): Promise<PlexDevice[]> {
@@ -199,19 +225,6 @@ class PlexTvAPI {
     }
   }
 
-  public async getFriends(): Promise<FriendResponse> {
-    const response = await this.axios.get('/pms/friends/all', {
-      transformResponse: [],
-      responseType: 'text',
-    });
-
-    const parsedXml = (await xml2js.parseStringPromise(
-      response.data
-    )) as FriendResponse;
-
-    return parsedXml;
-  }
-
   public async checkUserAccess(userId: number): Promise<boolean> {
     const settings = getSettings();
 
@@ -220,9 +233,9 @@ class PlexTvAPI {
         throw new Error('Plex is not configured!');
       }
 
-      const friends = await this.getFriends();
+      const usersResponse = await this.getUsers();
 
-      const users = friends.MediaContainer.User;
+      const users = usersResponse.MediaContainer.User;
 
       const user = users.find((u) => parseInt(u.$.id) === userId);
 
@@ -251,6 +264,123 @@ class PlexTvAPI {
       response.data
     )) as UsersResponse;
     return parsedXml;
+  }
+
+  public async getWatchlist({
+    offset = 0,
+    size = 20,
+  }: { offset?: number; size?: number } = {}): Promise<{
+    offset: number;
+    size: number;
+    totalSize: number;
+    items: PlexWatchlistItem[];
+  }> {
+    try {
+      const watchlistCache = cacheManager.getCache('plexwatchlist');
+      let cachedWatchlist = watchlistCache.data.get<PlexWatchlistCache>(
+        this.authToken
+      );
+
+      const response = await this.axios.get<WatchlistResponse>(
+        '/library/sections/watchlist/all',
+        {
+          params: {
+            'X-Plex-Container-Start': offset,
+            'X-Plex-Container-Size': size,
+          },
+          headers: {
+            'If-None-Match': cachedWatchlist?.etag,
+          },
+          baseURL: 'https://metadata.provider.plex.tv',
+          validateStatus: (status) => status < 400, // Allow HTTP 304 to return without error
+        }
+      );
+
+      // If we don't recieve HTTP 304, the watchlist has been updated and we need to update the cache.
+      if (response.status >= 200 && response.status <= 299) {
+        cachedWatchlist = {
+          etag: response.headers.etag,
+          response: response.data,
+        };
+
+        watchlistCache.data.set<PlexWatchlistCache>(
+          this.authToken,
+          cachedWatchlist
+        );
+      }
+
+      const watchlistDetails = await Promise.all(
+        (cachedWatchlist?.response.MediaContainer.Metadata ?? []).map(
+          async (watchlistItem) => {
+            const detailedResponse = await this.getRolling<MetadataResponse>(
+              `/library/metadata/${watchlistItem.ratingKey}`,
+              {
+                baseURL: 'https://metadata.provider.plex.tv',
+              }
+            );
+
+            const metadata = detailedResponse.MediaContainer.Metadata[0];
+
+            const tmdbString = metadata.Guid.find((guid) =>
+              guid.id.startsWith('tmdb')
+            );
+            const tvdbString = metadata.Guid.find((guid) =>
+              guid.id.startsWith('tvdb')
+            );
+
+            return {
+              ratingKey: metadata.ratingKey,
+              // This should always be set? But I guess it also cannot be?
+              // We will filter out the 0's afterwards
+              tmdbId: tmdbString ? Number(tmdbString.id.split('//')[1]) : 0,
+              tvdbId: tvdbString
+                ? Number(tvdbString.id.split('//')[1])
+                : undefined,
+              title: metadata.title,
+              type: metadata.type,
+            };
+          }
+        )
+      );
+
+      const filteredList = watchlistDetails.filter((detail) => detail.tmdbId);
+
+      return {
+        offset,
+        size,
+        totalSize: cachedWatchlist?.response.MediaContainer.totalSize ?? 0,
+        items: filteredList,
+      };
+    } catch (e) {
+      logger.error('Failed to retrieve watchlist items', {
+        label: 'Plex.TV Metadata API',
+        errorMessage: e.message,
+      });
+      return {
+        offset,
+        size,
+        totalSize: 0,
+        items: [],
+      };
+    }
+  }
+
+  public async pingToken() {
+    try {
+      const response = await this.axios.get('/api/v2/ping', {
+        headers: {
+          'X-Plex-Client-Identifier': randomUUID(),
+        },
+      });
+      if (!response?.data?.pong) {
+        throw new Error('No pong response');
+      }
+    } catch (e) {
+      logger.error('Failed to ping token', {
+        label: 'Plex Refresh Token',
+        errorMessage: e.message,
+      });
+    }
   }
 }
 

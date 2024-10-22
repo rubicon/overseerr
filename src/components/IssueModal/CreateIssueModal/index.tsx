@@ -1,28 +1,25 @@
+import Button from '@app/components/Common/Button';
+import Modal from '@app/components/Common/Modal';
+import { issueOptions } from '@app/components/IssueModal/constants';
+import useSettings from '@app/hooks/useSettings';
+import { Permission, useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
 import { RadioGroup } from '@headlessui/react';
-import { ExclamationIcon } from '@heroicons/react/outline';
-import { ArrowCircleRightIcon } from '@heroicons/react/solid';
+import { ArrowRightCircleIcon } from '@heroicons/react/24/solid';
+import { MediaStatus } from '@server/constants/media';
+import type Issue from '@server/entity/Issue';
+import type { MovieDetails } from '@server/models/Movie';
+import type { TvDetails } from '@server/models/Tv';
 import axios from 'axios';
 import { Field, Formik } from 'formik';
 import Link from 'next/link';
-import React from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
 import * as Yup from 'yup';
-import { MediaStatus } from '../../../../server/constants/media';
-import type Issue from '../../../../server/entity/Issue';
-import { MovieDetails } from '../../../../server/models/Movie';
-import { TvDetails } from '../../../../server/models/Tv';
-import useSettings from '../../../hooks/useSettings';
-import { Permission, useUser } from '../../../hooks/useUser';
-import globalMessages from '../../../i18n/globalMessages';
-import Button from '../../Common/Button';
-import Modal from '../../Common/Modal';
-import { issueOptions } from '../constants';
 
 const messages = defineMessages({
   validationMessageRequired: 'You must provide a description',
-  issomethingwrong: 'Is there a problem with {title}?',
   whatswrong: "What's wrong?",
   providedetail:
     'Please provide a detailed explanation of the issue you encountered.',
@@ -55,11 +52,11 @@ interface CreateIssueModalProps {
   onCancel?: () => void;
 }
 
-const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
+const CreateIssueModal = ({
   onCancel,
   mediaType,
   tmdbId,
-}) => {
+}: CreateIssueModalProps) => {
   const intl = useIntl();
   const settings = useSettings();
   const { hasPermission } = useUser();
@@ -118,15 +115,13 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                 <div>
                   {intl.formatMessage(messages.toastSuccessCreate, {
                     title: isMovie(data) ? data.title : data.name,
-                    strong: function strong(msg) {
-                      return <strong>{msg}</strong>;
-                    },
+                    strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
                   })}
                 </div>
                 <Link href={`/issues/${newIssue.data.id}`}>
                   <Button as="a" className="mt-4">
                     <span>{intl.formatMessage(messages.toastviewissue)}</span>
-                    <ArrowCircleRightIcon />
+                    <ArrowRightCircleIcon />
                   </Button>
                 </Link>
               </>,
@@ -153,23 +148,14 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           <Modal
             backgroundClickable
             onCancel={onCancel}
-            iconSvg={<ExclamationIcon />}
             title={intl.formatMessage(messages.reportissue)}
+            subTitle={data && isMovie(data) ? data?.title : data?.name}
             cancelText={intl.formatMessage(globalMessages.close)}
             onOk={() => handleSubmit()}
             okText={intl.formatMessage(messages.submitissue)}
             loading={!data && !error}
             backdrop={`https://image.tmdb.org/t/p/w1920_and_h800_multi_faces/${data?.backdropPath}`}
           >
-            {data && (
-              <div className="flex items-center">
-                <span className="mr-1 font-semibold">
-                  {intl.formatMessage(messages.issomethingwrong, {
-                    title: isMovie(data) ? data.title : data.name,
-                  })}
-                </span>
-              </div>
-            )}
             {mediaType === 'tv' && data && !isMovie(data) && (
               <>
                 <div className="form-row">
@@ -177,7 +163,7 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                     {intl.formatMessage(messages.problemseason)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -207,12 +193,12 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                   </div>
                 </div>
                 {values.problemSeason > 0 && (
-                  <div className="mb-2 form-row">
+                  <div className="form-row mb-2">
                     <label htmlFor="problemEpisode" className="text-label">
                       {intl.formatMessage(messages.problemepisode)}
                       <span className="label-required">*</span>
                     </label>
-                    <div className="form-input">
+                    <div className="form-input-area">
                       <div className="form-input-field">
                         <Field
                           as="select"
@@ -255,7 +241,7 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
               <RadioGroup.Label className="sr-only">
                 Select an Issue
               </RadioGroup.Label>
-              <div className="-space-y-px overflow-hidden bg-gray-800 rounded-md bg-opacity-30">
+              <div className="-space-y-px overflow-hidden rounded-md bg-gray-800 bg-opacity-30">
                 {issueOptions.map((setting, index) => (
                   <RadioGroup.Option
                     key={`issue-type-${setting.issueType}`}
@@ -267,9 +253,9 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                           ? 'rounded-bl-md rounded-br-md'
                           : '',
                         checked
-                          ? 'bg-indigo-600 border-indigo-500 z-10'
+                          ? 'z-10 border border-indigo-500 bg-indigo-400 bg-opacity-20'
                           : 'border-gray-500',
-                        'relative border p-4 flex cursor-pointer focus:outline-none'
+                        'relative flex cursor-pointer border p-4 focus:outline-none'
                       )
                     }
                   >
@@ -278,16 +264,16 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                         <span
                           className={`${
                             checked
-                              ? 'bg-indigo-800 border-transparent'
-                              : 'bg-white border-gray-300'
+                              ? 'border-transparent bg-indigo-600'
+                              : 'border-gray-300 bg-white'
                           } ${
-                            active ? 'ring-2 ring-offset-2 ring-indigo-300' : ''
-                          } h-4 w-4 mt-0.5 cursor-pointer rounded-full border flex items-center justify-center`}
+                            active ? 'ring-2 ring-indigo-300 ring-offset-2' : ''
+                          } mt-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full border`}
                           aria-hidden="true"
                         >
-                          <span className="rounded-full bg-white w-1.5 h-1.5" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" />
                         </span>
-                        <div className="flex flex-col ml-3">
+                        <div className="ml-3 flex flex-col">
                           <RadioGroup.Label
                             as="span"
                             className={`block text-sm font-medium ${
@@ -303,7 +289,7 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                 ))}
               </div>
             </RadioGroup>
-            <div className="flex-col mt-4 space-y-2">
+            <div className="mt-4 flex-col space-y-2">
               <label htmlFor="message">
                 {intl.formatMessage(messages.whatswrong)}
                 <span className="label-required">*</span>
@@ -315,9 +301,11 @@ const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                 className="h-28"
                 placeholder={intl.formatMessage(messages.providedetail)}
               />
-              {errors.message && touched.message && (
-                <div className="error">{errors.message}</div>
-              )}
+              {errors.message &&
+                touched.message &&
+                typeof errors.message === 'string' && (
+                  <div className="error">{errors.message}</div>
+                )}
             </div>
           </Modal>
         );

@@ -1,18 +1,17 @@
-import { SaveIcon } from '@heroicons/react/outline';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import NotificationTypeSelector from '@app/components/NotificationTypeSelector';
+import { useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
+import { ArrowDownOnSquareIcon } from '@heroicons/react/24/outline';
+import type { UserSettingsNotificationsResponse } from '@server/interfaces/api/userSettingsInterfaces';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/router';
-import React from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
 import * as Yup from 'yup';
-import { UserSettingsNotificationsResponse } from '../../../../../server/interfaces/api/userSettingsInterfaces';
-import { useUser } from '../../../../hooks/useUser';
-import globalMessages from '../../../../i18n/globalMessages';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import NotificationTypeSelector from '../../../NotificationTypeSelector';
 
 const messages = defineMessages({
   telegramsettingssaved: 'Telegram notification settings saved successfully!',
@@ -25,12 +24,16 @@ const messages = defineMessages({
   validationTelegramChatId: 'You must provide a valid chat ID',
 });
 
-const UserTelegramSettings: React.FC = () => {
+const UserTelegramSettings = () => {
   const intl = useIntl();
   const { addToast } = useToasts();
   const router = useRouter();
   const { user } = useUser({ id: Number(router.query.userId) });
-  const { data, error, revalidate } = useSWR<UserSettingsNotificationsResponse>(
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<UserSettingsNotificationsResponse>(
     user ? `/api/v1/user/${user?.id}/settings/notifications` : null
   );
 
@@ -108,36 +111,30 @@ const UserTelegramSettings: React.FC = () => {
                 {data?.telegramBotUsername && (
                   <span className="label-tip">
                     {intl.formatMessage(messages.telegramChatIdTipLong, {
-                      TelegramBotLink: function TelegramBotLink(msg) {
-                        return (
-                          <a
-                            href={`https://telegram.me/${data.telegramBotUsername}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {msg}
-                          </a>
-                        );
-                      },
-                      GetIdBotLink: function GetIdBotLink(msg) {
-                        return (
-                          <a
-                            href="https://telegram.me/get_id_bot"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {msg}
-                          </a>
-                        );
-                      },
-                      code: function code(msg) {
-                        return <code>{msg}</code>;
-                      },
+                      TelegramBotLink: (msg: React.ReactNode) => (
+                        <a
+                          href={`https://telegram.me/${data.telegramBotUsername}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {msg}
+                        </a>
+                      ),
+                      GetIdBotLink: (msg: React.ReactNode) => (
+                        <a
+                          href="https://telegram.me/get_id_bot"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {msg}
+                        </a>
+                      ),
+                      code: (msg: React.ReactNode) => <code>{msg}</code>,
                     })}
                   </span>
                 )}
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <Field
                     id="telegramChatId"
@@ -145,9 +142,11 @@ const UserTelegramSettings: React.FC = () => {
                     type="text"
                   />
                 </div>
-                {errors.telegramChatId && touched.telegramChatId && (
-                  <div className="error">{errors.telegramChatId}</div>
-                )}
+                {errors.telegramChatId &&
+                  touched.telegramChatId &&
+                  typeof errors.telegramChatId === 'string' && (
+                    <div className="error">{errors.telegramChatId}</div>
+                  )}
               </div>
             </div>
             <div className="form-row">
@@ -157,7 +156,7 @@ const UserTelegramSettings: React.FC = () => {
                   {intl.formatMessage(messages.sendSilentlyDescription)}
                 </span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <Field
                   type="checkbox"
                   id="telegramSendSilently"
@@ -180,13 +179,13 @@ const UserTelegramSettings: React.FC = () => {
             />
             <div className="actions">
               <div className="flex justify-end">
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="primary"
                     type="submit"
                     disabled={isSubmitting || !isValid}
                   >
-                    <SaveIcon />
+                    <ArrowDownOnSquareIcon />
                     <span>
                       {isSubmitting
                         ? intl.formatMessage(globalMessages.saving)

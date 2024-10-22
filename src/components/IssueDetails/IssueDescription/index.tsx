@@ -1,12 +1,12 @@
+import Button from '@app/components/Common/Button';
+import { Permission, useUser } from '@app/hooks/useUser';
+import globalMessages from '@app/i18n/globalMessages';
 import { Menu, Transition } from '@headlessui/react';
-import { DotsVerticalIcon } from '@heroicons/react/solid';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import { Field, Form, Formik } from 'formik';
-import React, { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import ReactMarkdown from 'react-markdown';
-import { Permission, useUser } from '../../../hooks/useUser';
-import globalMessages from '../../../i18n/globalMessages';
-import Button from '../../Common/Button';
 
 const messages = defineMessages({
   description: 'Description',
@@ -22,13 +22,13 @@ interface IssueDescriptionProps {
   onDelete: () => void;
 }
 
-const IssueDescription: React.FC<IssueDescriptionProps> = ({
+const IssueDescription = ({
   description,
   belongsToUser,
   commentCount,
   onEdit,
   onDelete,
-}) => {
+}: IssueDescriptionProps) => {
   const intl = useIntl();
   const { hasPermission } = useUser();
   const [isEditing, setIsEditing] = useState(false);
@@ -44,25 +44,28 @@ const IssueDescription: React.FC<IssueDescriptionProps> = ({
             {({ open }) => (
               <>
                 <div>
-                  <Menu.Button className="flex items-center text-gray-400 rounded-full hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500">
+                  <Menu.Button className="flex items-center rounded-full text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
                     <span className="sr-only">Open options</span>
-                    <DotsVerticalIcon className="w-5 h-5" aria-hidden="true" />
+                    <EllipsisVerticalIcon
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    />
                   </Menu.Button>
                 </div>
 
                 <Transition
                   show={open}
-                  as={Fragment}
+                  as="div"
                   enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
                   leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
                 >
                   <Menu.Items
                     static
-                    className="absolute right-0 w-56 mt-2 origin-top-right bg-gray-700 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                   >
                     <div className="py-1">
                       {belongsToUser && (
@@ -70,7 +73,7 @@ const IssueDescription: React.FC<IssueDescriptionProps> = ({
                           {({ active }) => (
                             <button
                               onClick={() => setIsEditing(true)}
-                              className={`block w-full text-left px-4 py-2 text-sm ${
+                              className={`block w-full px-4 py-2 text-left text-sm ${
                                 active
                                   ? 'bg-gray-600 text-white'
                                   : 'text-gray-100'
@@ -87,7 +90,7 @@ const IssueDescription: React.FC<IssueDescriptionProps> = ({
                           {({ active }) => (
                             <button
                               onClick={() => onDelete()}
-                              className={`block w-full text-left px-4 py-2 text-sm ${
+                              className={`block w-full px-4 py-2 text-left text-sm ${
                                 active
                                   ? 'bg-gray-600 text-white'
                                   : 'text-gray-100'
@@ -123,7 +126,7 @@ const IssueDescription: React.FC<IssueDescriptionProps> = ({
                   as="textarea"
                   className="h-40"
                 />
-                <div className="flex justify-end mt-2">
+                <div className="mt-2 flex justify-end">
                   <Button
                     buttonType="default"
                     className="mr-2"
@@ -141,7 +144,7 @@ const IssueDescription: React.FC<IssueDescriptionProps> = ({
           }}
         </Formik>
       ) : (
-        <div className="mt-4 prose">
+        <div className="prose mt-4">
           <ReactMarkdown
             allowedElements={['p', 'img', 'strong', 'em']}
             skipHtml

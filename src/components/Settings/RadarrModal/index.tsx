@@ -1,24 +1,20 @@
-import { PencilIcon, PlusIcon } from '@heroicons/react/solid';
+import Modal from '@app/components/Common/Modal';
+import SensitiveInput from '@app/components/Common/SensitiveInput';
+import globalMessages from '@app/i18n/globalMessages';
+import { Transition } from '@headlessui/react';
+import type { RadarrSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Field, Formik } from 'formik';
-import dynamic from 'next/dynamic';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
-import type { OptionsType, OptionTypeBase } from 'react-select';
+import Select from 'react-select';
 import { useToasts } from 'react-toast-notifications';
 import * as Yup from 'yup';
-import type { RadarrSettings } from '../../../../server/lib/settings';
-import globalMessages from '../../../i18n/globalMessages';
-import Modal from '../../Common/Modal';
-import SensitiveInput from '../../Common/SensitiveInput';
-import Transition from '../../Transition';
 
 type OptionType = {
-  value: string;
+  value: number;
   label: string;
 };
-
-const Select = dynamic(() => import('react-select'), { ssr: false });
 
 const messages = defineMessages({
   createradarr: 'Add New Radarr Server',
@@ -61,10 +57,13 @@ const messages = defineMessages({
   testFirstTags: 'Test connection to load tags',
   tags: 'Tags',
   enableSearch: 'Enable Automatic Search',
+  tagRequests: 'Tag Requests',
+  tagRequestsInfo:
+    "Automatically add an additional tag with the requester's user ID & display name",
   validationApplicationUrl: 'You must provide a valid URL',
   validationApplicationUrlTrailingSlash: 'URL must not end in a trailing slash',
-  validationBaseUrlLeadingSlash: 'Base URL must have a leading slash',
-  validationBaseUrlTrailingSlash: 'Base URL must not end in a trailing slash',
+  validationBaseUrlLeadingSlash: 'URL base must have a leading slash',
+  validationBaseUrlTrailingSlash: 'URL base must not end in a trailing slash',
   notagoptions: 'No tags.',
   selecttags: 'Select tags',
   announced: 'Announced',
@@ -94,11 +93,7 @@ interface RadarrModalProps {
   onSave: () => void;
 }
 
-const RadarrModal: React.FC<RadarrModalProps> = ({
-  onClose,
-  radarr,
-  onSave,
-}) => {
+const RadarrModal = ({ onClose, radarr, onSave }: RadarrModalProps) => {
   const intl = useIntl();
   const initialLoad = useRef(false);
   const { addToast } = useToasts();
@@ -219,12 +214,13 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
 
   return (
     <Transition
+      as="div"
       appear
       show
-      enter="transition ease-in-out duration-300 transform opacity-0"
+      enter="transition-opacity ease-in-out duration-300"
       enterFrom="opacity-0"
-      enterTo="opacuty-100"
-      leave="transition ease-in-out duration-300 transform opacity-100"
+      enterTo="opacity-100"
+      leave="transition-opacity ease-in-out duration-300"
       leaveFrom="opacity-100"
       leaveTo="opacity-0"
     >
@@ -245,6 +241,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
           externalUrl: radarr?.externalUrl,
           syncEnabled: radarr?.syncEnabled ?? false,
           enableSearch: !radarr?.preventSearch,
+          tagRequests: radarr?.tagRequests ?? false,
         }}
         validationSchema={RadarrSettingsSchema}
         onSubmit={async (values) => {
@@ -270,6 +267,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
               externalUrl: values.externalUrl,
               syncEnabled: values.syncEnabled,
               preventSearch: !values.enableSearch,
+              tagRequests: values.tagRequests,
             };
             if (!radarr) {
               await axios.post('/api/v1/settings/radarr', submission);
@@ -346,7 +344,6 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                       values.is4k ? messages.edit4kradarr : messages.editradarr
                     )
               }
-              iconSvg={!radarr ? <PlusIcon /> : <PencilIcon />}
             >
               <div className="mb-6">
                 <div className="form-row">
@@ -357,7 +354,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         : messages.defaultserver
                     )}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field type="checkbox" id="isDefault" name="isDefault" />
                   </div>
                 </div>
@@ -365,7 +362,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                   <label htmlFor="is4k" className="checkbox-label">
                     {intl.formatMessage(messages.server4k)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field type="checkbox" id="is4k" name="is4k" />
                   </div>
                 </div>
@@ -374,7 +371,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.servername)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         id="name"
@@ -386,9 +383,11 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         }}
                       />
                     </div>
-                    {errors.name && touched.name && (
-                      <div className="error">{errors.name}</div>
-                    )}
+                    {errors.name &&
+                      touched.name &&
+                      typeof errors.name === 'string' && (
+                        <div className="error">{errors.name}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -396,7 +395,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.hostname)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <span className="protocol">
                         {values.ssl ? 'https://' : 'http://'}
@@ -413,9 +412,11 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         className="rounded-r-only"
                       />
                     </div>
-                    {errors.hostname && touched.hostname && (
-                      <div className="error">{errors.hostname}</div>
-                    )}
+                    {errors.hostname &&
+                      touched.hostname &&
+                      typeof errors.hostname === 'string' && (
+                        <div className="error">{errors.hostname}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -423,7 +424,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.port)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       id="port"
                       name="port"
@@ -435,16 +436,18 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         setFieldValue('port', e.target.value);
                       }}
                     />
-                    {errors.port && touched.port && (
-                      <div className="error">{errors.port}</div>
-                    )}
+                    {errors.port &&
+                      touched.port &&
+                      typeof errors.port === 'string' && (
+                        <div className="error">{errors.port}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="ssl" className="checkbox-label">
                     {intl.formatMessage(messages.ssl)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="ssl"
@@ -461,7 +464,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.apiKey)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <SensitiveInput
                         as="field"
@@ -474,16 +477,18 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         }}
                       />
                     </div>
-                    {errors.apiKey && touched.apiKey && (
-                      <div className="error">{errors.apiKey}</div>
-                    )}
+                    {errors.apiKey &&
+                      touched.apiKey &&
+                      typeof errors.apiKey === 'string' && (
+                        <div className="error">{errors.apiKey}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="baseUrl" className="text-label">
                     {intl.formatMessage(messages.baseUrl)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         id="baseUrl"
@@ -496,9 +501,11 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         }}
                       />
                     </div>
-                    {errors.baseUrl && touched.baseUrl && (
-                      <div className="error">{errors.baseUrl}</div>
-                    )}
+                    {errors.baseUrl &&
+                      touched.baseUrl &&
+                      typeof errors.baseUrl === 'string' && (
+                        <div className="error">{errors.baseUrl}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -506,7 +513,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.qualityprofile)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -534,9 +541,11 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                           ))}
                       </Field>
                     </div>
-                    {errors.activeProfileId && touched.activeProfileId && (
-                      <div className="error">{errors.activeProfileId}</div>
-                    )}
+                    {errors.activeProfileId &&
+                      touched.activeProfileId &&
+                      typeof errors.activeProfileId === 'string' && (
+                        <div className="error">{errors.activeProfileId}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -544,7 +553,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.rootfolder)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -570,9 +579,11 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                           ))}
                       </Field>
                     </div>
-                    {errors.rootFolder && touched.rootFolder && (
-                      <div className="error">{errors.rootFolder}</div>
-                    )}
+                    {errors.rootFolder &&
+                      touched.rootFolder &&
+                      typeof errors.rootFolder === 'string' && (
+                        <div className="error">{errors.rootFolder}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
@@ -580,7 +591,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                     {intl.formatMessage(messages.minimumAvailability)}
                     <span className="label-required">*</span>
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         as="select"
@@ -610,8 +621,8 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                   <label htmlFor="tags" className="text-label">
                     {intl.formatMessage(messages.tags)}
                   </label>
-                  <div className="form-input">
-                    <Select
+                  <div className="form-input-area">
+                    <Select<OptionType, true>
                       options={
                         isValidated
                           ? testResponse.tags.map((tag) => ({
@@ -631,24 +642,30 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                       }
                       className="react-select-container"
                       classNamePrefix="react-select"
-                      value={values.tags.map((tagId) => {
-                        const foundTag = testResponse.tags.find(
-                          (tag) => tag.id === tagId
-                        );
-                        return {
-                          value: foundTag?.id,
-                          label: foundTag?.label,
-                        };
-                      })}
-                      onChange={(
-                        value: OptionTypeBase | OptionsType<OptionType> | null
-                      ) => {
-                        if (!Array.isArray(value)) {
-                          return;
-                        }
+                      value={
+                        values.tags
+                          .map((tagId) => {
+                            const foundTag = testResponse.tags.find(
+                              (tag) => tag.id === tagId
+                            );
+
+                            if (!foundTag) {
+                              return undefined;
+                            }
+
+                            return {
+                              value: foundTag.id,
+                              label: foundTag.label,
+                            };
+                          })
+                          .filter(
+                            (option) => option !== undefined
+                          ) as OptionType[]
+                      }
+                      onChange={(value) => {
                         setFieldValue(
                           'tags',
-                          value?.map((option) => option.value)
+                          value.map((option) => option.value)
                         );
                       }}
                       noOptionsMessage={() =>
@@ -661,7 +678,7 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                   <label htmlFor="externalUrl" className="text-label">
                     {intl.formatMessage(messages.externalUrl)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
                         id="externalUrl"
@@ -670,16 +687,18 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                         inputMode="url"
                       />
                     </div>
-                    {errors.externalUrl && touched.externalUrl && (
-                      <div className="error">{errors.externalUrl}</div>
-                    )}
+                    {errors.externalUrl &&
+                      touched.externalUrl &&
+                      typeof errors.externalUrl === 'string' && (
+                        <div className="error">{errors.externalUrl}</div>
+                      )}
                   </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="syncEnabled" className="checkbox-label">
                     {intl.formatMessage(messages.syncEnabled)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="syncEnabled"
@@ -691,11 +710,26 @@ const RadarrModal: React.FC<RadarrModalProps> = ({
                   <label htmlFor="enableSearch" className="checkbox-label">
                     {intl.formatMessage(messages.enableSearch)}
                   </label>
-                  <div className="form-input">
+                  <div className="form-input-area">
                     <Field
                       type="checkbox"
                       id="enableSearch"
                       name="enableSearch"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <label htmlFor="tagRequests" className="checkbox-label">
+                    {intl.formatMessage(messages.tagRequests)}
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.tagRequestsInfo)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <Field
+                      type="checkbox"
+                      id="tagRequests"
+                      name="tagRequests"
                     />
                   </div>
                 </div>

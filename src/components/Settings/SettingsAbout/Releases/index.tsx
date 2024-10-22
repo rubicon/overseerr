@@ -1,14 +1,21 @@
-import { DocumentTextIcon } from '@heroicons/react/outline';
-import React, { useState } from 'react';
+import Badge from '@app/components/Common/Badge';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import Modal from '@app/components/Common/Modal';
+import globalMessages from '@app/i18n/globalMessages';
+import { Transition } from '@headlessui/react';
+import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import dynamic from 'next/dynamic';
+import { Fragment, useState } from 'react';
 import { defineMessages, FormattedRelativeTime, useIntl } from 'react-intl';
-import ReactMarkdown from 'react-markdown';
 import useSWR from 'swr';
-import globalMessages from '../../../../i18n/globalMessages';
-import Badge from '../../../Common/Badge';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import Modal from '../../../Common/Modal';
-import Transition from '../../../Transition';
+
+// dyanmic is having trouble extracting the props for react-markdown here so we are just ignoring it since its really
+// only children we are using
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ReactMarkdown = dynamic<any>(() => import('react-markdown'), {
+  ssr: false,
+});
 
 const messages = defineMessages({
   releases: 'Releases',
@@ -48,28 +55,24 @@ interface ReleaseProps {
   currentVersion: string;
 }
 
-const Release: React.FC<ReleaseProps> = ({
-  currentVersion,
-  release,
-  isLatest,
-}) => {
+const Release = ({ currentVersion, release, isLatest }: ReleaseProps) => {
   const intl = useIntl();
   const [isModalOpen, setModalOpen] = useState(false);
 
   return (
-    <div className="flex flex-col w-full px-4 py-2 space-y-3 bg-gray-800 rounded-md shadow-md sm:space-y-0 sm:space-x-3 sm:flex-row ring-1 ring-gray-700">
+    <div className="flex w-full flex-col space-y-3 rounded-md bg-gray-800 px-4 py-2 shadow-md ring-1 ring-gray-700 sm:flex-row sm:space-y-0 sm:space-x-3">
       <Transition
-        enter="opacity-0 transition duration-300"
+        as={Fragment}
+        enter="transition-opacity duration-300"
         enterFrom="opacity-0"
         enterTo="opacity-100"
-        leave="opacity-100 transition duration-300"
+        leave="transition-opacity duration-300"
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
         show={isModalOpen}
       >
         <Modal
           onCancel={() => setModalOpen(false)}
-          iconSvg={<DocumentTextIcon />}
           title={intl.formatMessage(messages.versionChangelog, {
             version: release.name,
           })}
@@ -84,9 +87,9 @@ const Release: React.FC<ReleaseProps> = ({
           </div>
         </Modal>
       </Transition>
-      <div className="flex items-center justify-center flex-grow w-full space-x-2 truncate sm:justify-start">
-        <span className="text-lg font-bold truncate">
-          <span className="mr-2 text-xs font-normal whitespace-nowrap">
+      <div className="flex w-full flex-grow items-center justify-center space-x-2 truncate sm:justify-start">
+        <span className="truncate text-lg font-bold">
+          <span className="mr-2 whitespace-nowrap text-xs font-normal">
             <FormattedRelativeTime
               value={Math.floor(
                 (new Date(release.created_at).getTime() - Date.now()) / 1000
@@ -120,7 +123,7 @@ interface ReleasesProps {
   currentVersion: string;
 }
 
-const Releases: React.FC<ReleasesProps> = ({ currentVersion }) => {
+const Releases = ({ currentVersion }: ReleasesProps) => {
   const intl = useIntl();
   const { data, error } = useSWR<GitHubRelease[]>(REPO_RELEASE_API);
 
@@ -139,7 +142,7 @@ const Releases: React.FC<ReleasesProps> = ({ currentVersion }) => {
   return (
     <div>
       <h3 className="heading">{intl.formatMessage(messages.releases)}</h3>
-      <div className="space-y-3 section">
+      <div className="section space-y-3">
         {data.map((release, index) => {
           return (
             <div key={`release-${release.id}`}>

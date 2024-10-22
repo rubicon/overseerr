@@ -1,16 +1,16 @@
-import { BeakerIcon, SaveIcon } from '@heroicons/react/outline';
+import Button from '@app/components/Common/Button';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import SensitiveInput from '@app/components/Common/SensitiveInput';
+import NotificationTypeSelector from '@app/components/NotificationTypeSelector';
+import globalMessages from '@app/i18n/globalMessages';
+import { ArrowDownOnSquareIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { useToasts } from 'react-toast-notifications';
 import useSWR from 'swr';
 import * as Yup from 'yup';
-import globalMessages from '../../../../i18n/globalMessages';
-import Button from '../../../Common/Button';
-import LoadingSpinner from '../../../Common/LoadingSpinner';
-import SensitiveInput from '../../../Common/SensitiveInput';
-import NotificationTypeSelector from '../../../NotificationTypeSelector';
 
 const messages = defineMessages({
   agentEnabled: 'Enable Agent',
@@ -18,6 +18,7 @@ const messages = defineMessages({
   accessTokenTip:
     'Create a token from your <PushbulletSettingsLink>Account Settings</PushbulletSettingsLink>',
   validationAccessTokenRequired: 'You must provide an access token',
+  channelTag: 'Channel Tag',
   pushbulletSettingsSaved:
     'Pushbullet notification settings saved successfully!',
   pushbulletSettingsFailed: 'Pushbullet notification settings failed to save.',
@@ -27,13 +28,15 @@ const messages = defineMessages({
   validationTypes: 'You must select at least one notification type',
 });
 
-const NotificationsPushbullet: React.FC = () => {
+const NotificationsPushbullet = () => {
   const intl = useIntl();
   const { addToast, removeToast } = useToasts();
   const [isTesting, setIsTesting] = useState(false);
-  const { data, error, revalidate } = useSWR(
-    '/api/v1/settings/notifications/pushbullet'
-  );
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR('/api/v1/settings/notifications/pushbullet');
 
   const NotificationsPushbulletSchema = Yup.object().shape({
     accessToken: Yup.string().when('enabled', {
@@ -55,6 +58,7 @@ const NotificationsPushbullet: React.FC = () => {
         enabled: data?.enabled,
         types: data?.types,
         accessToken: data?.options.accessToken,
+        channelTag: data.options.channelTag,
       }}
       validationSchema={NotificationsPushbulletSchema}
       onSubmit={async (values) => {
@@ -64,6 +68,7 @@ const NotificationsPushbullet: React.FC = () => {
             types: values.types,
             options: {
               accessToken: values.accessToken,
+              channelTag: values.channelTag,
             },
           });
           addToast(intl.formatMessage(messages.pushbulletSettingsSaved), {
@@ -108,6 +113,7 @@ const NotificationsPushbullet: React.FC = () => {
               types: values.types,
               options: {
                 accessToken: values.accessToken,
+                channelTag: values.channelTag,
               },
             });
 
@@ -138,7 +144,7 @@ const NotificationsPushbullet: React.FC = () => {
                 {intl.formatMessage(messages.agentEnabled)}
                 <span className="label-required">*</span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <Field type="checkbox" id="enabled" name="enabled" />
               </div>
             </div>
@@ -148,24 +154,20 @@ const NotificationsPushbullet: React.FC = () => {
                 <span className="label-required">*</span>
                 <span className="label-tip">
                   {intl.formatMessage(messages.accessTokenTip, {
-                    PushbulletSettingsLink: function PushbulletSettingsLink(
-                      msg
-                    ) {
-                      return (
-                        <a
-                          href="https://www.pushbullet.com/#settings/account"
-                          className="text-white transition duration-300 hover:underline"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {msg}
-                        </a>
-                      );
-                    },
+                    PushbulletSettingsLink: (msg: React.ReactNode) => (
+                      <a
+                        href="https://www.pushbullet.com/#settings/account"
+                        className="text-white transition duration-300 hover:underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {msg}
+                      </a>
+                    ),
                   })}
                 </span>
               </label>
-              <div className="form-input">
+              <div className="form-input-area">
                 <div className="form-input-field">
                   <SensitiveInput
                     as="field"
@@ -174,9 +176,21 @@ const NotificationsPushbullet: React.FC = () => {
                     autoComplete="one-time-code"
                   />
                 </div>
-                {errors.accessToken && touched.accessToken && (
-                  <div className="error">{errors.accessToken}</div>
-                )}
+                {errors.accessToken &&
+                  touched.accessToken &&
+                  typeof errors.accessToken === 'string' && (
+                    <div className="error">{errors.accessToken}</div>
+                  )}
+              </div>
+            </div>
+            <div className="form-row">
+              <label htmlFor="channelTag" className="text-label">
+                {intl.formatMessage(messages.channelTag)}
+              </label>
+              <div className="form-input-area">
+                <div className="form-input-field">
+                  <Field id="channelTag" name="channelTag" type="text" />
+                </div>
               </div>
             </div>
             <NotificationTypeSelector
@@ -197,7 +211,7 @@ const NotificationsPushbullet: React.FC = () => {
             />
             <div className="actions">
               <div className="flex justify-end">
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="warning"
                     disabled={isSubmitting || !isValid || isTesting}
@@ -214,7 +228,7 @@ const NotificationsPushbullet: React.FC = () => {
                     </span>
                   </Button>
                 </span>
-                <span className="inline-flex ml-3 rounded-md shadow-sm">
+                <span className="ml-3 inline-flex rounded-md shadow-sm">
                   <Button
                     buttonType="primary"
                     type="submit"
@@ -225,7 +239,7 @@ const NotificationsPushbullet: React.FC = () => {
                       (values.enabled && !values.types)
                     }
                   >
-                    <SaveIcon />
+                    <ArrowDownOnSquareIcon />
                     <span>
                       {isSubmitting
                         ? intl.formatMessage(globalMessages.saving)

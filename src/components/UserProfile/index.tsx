@@ -1,28 +1,30 @@
-import { ArrowCircleRightIcon } from '@heroicons/react/outline';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { defineMessages, useIntl } from 'react-intl';
-import useSWR from 'swr';
-import {
+import ImageFader from '@app/components/Common/ImageFader';
+import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import PageTitle from '@app/components/Common/PageTitle';
+import ProgressCircle from '@app/components/Common/ProgressCircle';
+import RequestCard from '@app/components/RequestCard';
+import Slider from '@app/components/Slider';
+import TmdbTitleCard from '@app/components/TitleCard/TmdbTitleCard';
+import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
+import { Permission, UserType, useUser } from '@app/hooks/useUser';
+import Error from '@app/pages/_error';
+import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
+import type { WatchlistResponse } from '@server/interfaces/api/discoverInterfaces';
+import type {
   QuotaResponse,
   UserRequestsResponse,
-} from '../../../server/interfaces/api/userInterfaces';
-import { MovieDetails } from '../../../server/models/Movie';
-import { TvDetails } from '../../../server/models/Tv';
-import { Permission, useUser } from '../../hooks/useUser';
-import Error from '../../pages/_error';
-import ImageFader from '../Common/ImageFader';
-import LoadingSpinner from '../Common/LoadingSpinner';
-import PageTitle from '../Common/PageTitle';
-import ProgressCircle from '../Common/ProgressCircle';
-import RequestCard from '../RequestCard';
-import Slider from '../Slider';
-import ProfileHeader from './ProfileHeader';
+  UserWatchDataResponse,
+} from '@server/interfaces/api/userInterfaces';
+import type { MovieDetails } from '@server/models/Movie';
+import type { TvDetails } from '@server/models/Tv';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useCallback, useEffect, useState } from 'react';
+import { defineMessages, useIntl } from 'react-intl';
+import useSWR from 'swr';
 
 const messages = defineMessages({
   recentrequests: 'Recent Requests',
-  norequests: 'No requests.',
   limit: '{remaining} of {limit}',
   requestsperdays: '{limit} remaining',
   unlimited: 'Unlimited',
@@ -30,11 +32,15 @@ const messages = defineMessages({
   pastdays: '{type} (past {days} days)',
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
+  recentlywatched: 'Recently Watched',
+  plexwatchlist: 'Plex Watchlist',
+  emptywatchlist:
+    'Media added to your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink> will appear here.',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
 
-const UserProfile: React.FC = () => {
+const UserProfile = () => {
   const intl = useIntl();
   const router = useRouter();
   const { user, error } = useUser({
@@ -46,11 +52,48 @@ const UserProfile: React.FC = () => {
   >({});
 
   const { data: requests, error: requestError } = useSWR<UserRequestsResponse>(
-    user ? `/api/v1/user/${user?.id}/requests?take=10&skip=0` : null
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
+          { type: 'or' }
+        ))
+      ? `/api/v1/user/${user?.id}/requests?take=10&skip=0`
+      : null
   );
   const { data: quota } = useSWR<QuotaResponse>(
-    user ? `/api/v1/user/${user.id}/quota` : null
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'and' }
+        ))
+      ? `/api/v1/user/${user.id}/quota`
+      : null
   );
+  const { data: watchData, error: watchDataError } =
+    useSWR<UserWatchDataResponse>(
+      user?.userType === UserType.PLEX &&
+        (user.id === currentUser?.id || currentHasPermission(Permission.ADMIN))
+        ? `/api/v1/user/${user.id}/watch_data`
+        : null
+    );
+  const { data: watchlistItems, error: watchlistError } =
+    useSWR<WatchlistResponse>(
+      user?.userType === UserType.PLEX &&
+        (user.id === currentUser?.id ||
+          currentHasPermission(
+            [Permission.MANAGE_REQUESTS, Permission.WATCHLIST_VIEW],
+            {
+              type: 'or',
+            }
+          ))
+        ? `/api/v1/user/${user.id}/watchlist`
+        : null,
+      {
+        revalidateOnMount: true,
+      }
+    );
 
   const updateAvailableTitles = useCallback(
     (requestId: number, mediaTitle: MediaTitle) => {
@@ -78,7 +121,7 @@ const UserProfile: React.FC = () => {
     <>
       <PageTitle title={user.displayName} />
       {Object.keys(availableTitles).length > 0 && (
-        <div className="absolute left-0 right-0 z-0 -top-16 h-96">
+        <div className="absolute left-0 right-0 -top-16 z-0 h-96">
           <ImageFader
             key={user.id}
             isDarker
@@ -95,27 +138,37 @@ const UserProfile: React.FC = () => {
       <ProfileHeader user={user} />
       {quota &&
         (user.id === currentUser?.id ||
-          currentHasPermission(Permission.MANAGE_USERS)) && (
+          currentHasPermission(
+            [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+            { type: 'and' }
+          )) && (
           <div className="relative z-40">
-            <dl className="grid grid-cols-1 gap-5 mt-5 lg:grid-cols-3">
-              <div className="px-4 py-5 overflow-hidden bg-gray-800 bg-opacity-50 rounded-lg shadow ring-1 ring-gray-700 sm:p-6">
-                <dt className="text-sm font-bold text-gray-300 truncate">
+            <dl className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+              <div className="overflow-hidden rounded-lg bg-gray-800 bg-opacity-50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
+                <dt className="truncate text-sm font-bold text-gray-300">
                   {intl.formatMessage(messages.totalrequests)}
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-white">
-                  {intl.formatNumber(user.requestCount)}
+                  <Link
+                    href={
+                      user.id === currentUser?.id
+                        ? '/profile/requests?filter=all'
+                        : `/users/${user?.id}/requests?filter=all`
+                    }
+                  >
+                    <a>{intl.formatNumber(user.requestCount)}</a>
+                  </Link>
                 </dd>
               </div>
-
               <div
-                className={`px-4 py-5 overflow-hidden bg-gray-800 bg-opacity-50 rounded-lg shadow ring-1 ${
+                className={`overflow-hidden rounded-lg bg-gray-800 bg-opacity-50 px-4 py-5 shadow ring-1 ${
                   quota.movie.restricted
-                    ? 'ring-red-500 from-red-900 to-transparent bg-gradient-to-t'
+                    ? 'bg-gradient-to-t from-red-900 to-transparent ring-red-500'
                     : 'ring-gray-700'
                 } sm:p-6`}
               >
                 <dt
-                  className={`text-sm font-bold truncate ${
+                  className={`truncate text-sm font-bold ${
                     quota.movie.restricted ? 'text-red-500' : 'text-gray-300'
                   }`}
                 >
@@ -127,7 +180,7 @@ const UserProfile: React.FC = () => {
                     : intl.formatMessage(messages.movierequests)}
                 </dt>
                 <dd
-                  className={`flex mt-1 text-sm items-center ${
+                  className={`mt-1 flex items-center text-sm ${
                     quota.movie.restricted ? 'text-red-500' : 'text-white'
                   }`}
                 >
@@ -140,7 +193,7 @@ const UserProfile: React.FC = () => {
                             100
                         )}
                         useHeatLevel
-                        className="w-8 h-8 mr-2"
+                        className="mr-2 h-8 w-8"
                       />
                       <div>
                         {intl.formatMessage(messages.requestsperdays, {
@@ -162,16 +215,15 @@ const UserProfile: React.FC = () => {
                   )}
                 </dd>
               </div>
-
               <div
-                className={`px-4 py-5 overflow-hidden bg-gray-800 bg-opacity-50 rounded-lg shadow ring-1 ${
+                className={`overflow-hidden rounded-lg bg-gray-800 bg-opacity-50 px-4 py-5 shadow ring-1 ${
                   quota.tv.restricted
-                    ? 'ring-red-500 from-red-900 to-transparent bg-gradient-to-t'
+                    ? 'bg-gradient-to-t from-red-900 to-transparent ring-red-500'
                     : 'ring-gray-700'
                 } sm:p-6`}
               >
                 <dt
-                  className={`text-sm font-bold truncate ${
+                  className={`truncate text-sm font-bold ${
                     quota.tv.restricted ? 'text-red-500' : 'text-gray-300'
                   }`}
                 >
@@ -183,7 +235,7 @@ const UserProfile: React.FC = () => {
                     : intl.formatMessage(messages.seriesrequest)}
                 </dt>
                 <dd
-                  className={`flex items-center mt-1 text-sm ${
+                  className={`mt-1 flex items-center text-sm ${
                     quota.tv.restricted ? 'text-red-500' : 'text-white'
                   }`}
                 >
@@ -196,7 +248,7 @@ const UserProfile: React.FC = () => {
                             100
                         )}
                         useHeatLevel
-                        className="w-8 h-8 mr-2"
+                        className="mr-2 h-8 w-8"
                       />
                       <div>
                         {intl.formatMessage(messages.requestsperdays, {
@@ -225,34 +277,118 @@ const UserProfile: React.FC = () => {
         currentHasPermission(
           [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
           { type: 'or' }
-        )) && (
-        <>
-          <div className="slider-header">
-            <Link href={`/users/${user?.id}/requests?filter=all`}>
-              <a className="slider-title">
-                <span>{intl.formatMessage(messages.recentrequests)}</span>
-                <ArrowCircleRightIcon />
-              </a>
-            </Link>
-          </div>
-          <Slider
-            sliderKey="requests"
-            isLoading={!requests && !requestError}
-            isEmpty={
-              !!requests && !requestError && requests.results.length === 0
-            }
-            items={(requests?.results ?? []).map((request) => (
-              <RequestCard
-                key={`request-slider-item-${request.id}`}
-                request={request}
-                onTitleData={updateAvailableTitles}
-              />
-            ))}
-            placeholder={<RequestCard.Placeholder />}
-            emptyMessage={intl.formatMessage(messages.norequests)}
-          />
-        </>
-      )}
+        )) &&
+        (!requests || !!requests.results.length) &&
+        !requestError && (
+          <>
+            <div className="slider-header">
+              <Link
+                href={
+                  user.id === currentUser?.id
+                    ? '/profile/requests?filter=all'
+                    : `/users/${user?.id}/requests?filter=all`
+                }
+              >
+                <a className="slider-title">
+                  <span>{intl.formatMessage(messages.recentrequests)}</span>
+                  <ArrowRightCircleIcon />
+                </a>
+              </Link>
+            </div>
+            <Slider
+              sliderKey="requests"
+              isLoading={!requests}
+              items={(requests?.results ?? []).map((request) => (
+                <RequestCard
+                  key={`request-slider-item-${request.id}`}
+                  request={request}
+                  onTitleData={updateAvailableTitles}
+                />
+              ))}
+              placeholder={<RequestCard.Placeholder />}
+            />
+          </>
+        )}
+      {user.userType === UserType.PLEX &&
+        (user.id === currentUser?.id ||
+          currentHasPermission(
+            [Permission.MANAGE_REQUESTS, Permission.WATCHLIST_VIEW],
+            { type: 'or' }
+          )) &&
+        (!watchlistItems ||
+          !!watchlistItems.results.length ||
+          (user.id === currentUser?.id &&
+            (user.settings?.watchlistSyncMovies ||
+              user.settings?.watchlistSyncTv))) &&
+        !watchlistError && (
+          <>
+            <div className="slider-header">
+              <Link
+                href={
+                  user.id === currentUser?.id
+                    ? '/profile/watchlist'
+                    : `/users/${user?.id}/watchlist`
+                }
+              >
+                <a className="slider-title">
+                  <span>{intl.formatMessage(messages.plexwatchlist)}</span>
+                  <ArrowRightCircleIcon />
+                </a>
+              </Link>
+            </div>
+            <Slider
+              sliderKey="watchlist"
+              isLoading={!watchlistItems}
+              isEmpty={!!watchlistItems && watchlistItems.results.length === 0}
+              emptyMessage={intl.formatMessage(messages.emptywatchlist, {
+                PlexWatchlistSupportLink: (msg: React.ReactNode) => (
+                  <a
+                    href="https://support.plex.tv/articles/universal-watchlist/"
+                    className="text-white transition duration-300 hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {msg}
+                  </a>
+                ),
+              })}
+              items={watchlistItems?.results.map((item) => (
+                <TmdbTitleCard
+                  id={item.tmdbId}
+                  key={`watchlist-slider-item-${item.ratingKey}`}
+                  tmdbId={item.tmdbId}
+                  type={item.mediaType}
+                />
+              ))}
+            />
+          </>
+        )}
+      {user.userType === UserType.PLEX &&
+        (user.id === currentUser?.id ||
+          currentHasPermission(Permission.ADMIN)) &&
+        (!watchData || !!watchData.recentlyWatched.length) &&
+        !watchDataError && (
+          <>
+            <div className="slider-header">
+              <div className="slider-title">
+                <span>{intl.formatMessage(messages.recentlywatched)}</span>
+              </div>
+            </div>
+            <Slider
+              sliderKey="media"
+              isLoading={!watchData}
+              items={watchData?.recentlyWatched.map((item) => (
+                <TmdbTitleCard
+                  key={`media-slider-item-${item.id}`}
+                  id={item.id}
+                  tmdbId={item.tmdbId}
+                  tvdbId={item.tvdbId}
+                  type={item.mediaType}
+                />
+              ))}
+            />
+          </>
+        )}
     </>
   );
 };

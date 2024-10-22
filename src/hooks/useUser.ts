@@ -1,12 +1,9 @@
-import useSwr from 'swr';
-import { MutatorCallback } from 'swr/dist/types';
-import { UserType } from '../../server/constants/user';
-import {
-  hasPermission,
-  Permission,
-  PermissionCheckOptions,
-} from '../../server/lib/permissions';
-import { NotificationAgentKey } from '../../server/lib/settings';
+import { UserType } from '@server/constants/user';
+import type { PermissionCheckOptions } from '@server/lib/permissions';
+import { hasPermission, Permission } from '@server/lib/permissions';
+import type { NotificationAgentKey } from '@server/lib/settings';
+import type { MutatorCallback } from 'swr';
+import useSWR from 'swr';
 
 export { Permission, UserType };
 export type { PermissionCheckOptions };
@@ -34,14 +31,15 @@ export interface UserSettings {
   originalLanguage?: string;
   locale?: string;
   notificationTypes: Partial<NotificationAgentTypes>;
+  watchlistSyncMovies?: boolean;
+  watchlistSyncTv?: boolean;
 }
 
 interface UserHookResponse {
   user?: User;
   loading: boolean;
   error: string;
-  revalidate: () => Promise<boolean>;
-  mutate: (
+  revalidate: (
     data?: User | Promise<User> | MutatorCallback<User> | undefined,
     shouldRevalidate?: boolean | undefined
   ) => Promise<User | undefined>;
@@ -55,15 +53,16 @@ export const useUser = ({
   id,
   initialData,
 }: { id?: number; initialData?: User } = {}): UserHookResponse => {
-  const { data, error, revalidate, mutate } = useSwr<User>(
-    id ? `/api/v1/user/${id}` : `/api/v1/auth/me`,
-    {
-      initialData,
-      refreshInterval: 30000,
-      errorRetryInterval: 30000,
-      shouldRetryOnError: false,
-    }
-  );
+  const {
+    data,
+    error,
+    mutate: revalidate,
+  } = useSWR<User>(id ? `/api/v1/user/${id}` : `/api/v1/auth/me`, {
+    fallbackData: initialData,
+    refreshInterval: 30000,
+    errorRetryInterval: 30000,
+    shouldRetryOnError: false,
+  });
 
   const checkPermission = (
     permission: Permission | Permission[],
@@ -76,8 +75,7 @@ export const useUser = ({
     user: data,
     loading: !data && !error,
     error,
-    revalidate,
     hasPermission: checkPermission,
-    mutate,
+    revalidate,
   };
 };

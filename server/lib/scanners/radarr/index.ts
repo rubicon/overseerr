@@ -1,7 +1,13 @@
+import type { RadarrMovie } from '@server/api/servarr/radarr';
+import RadarrAPI from '@server/api/servarr/radarr';
+import type {
+  RunnableScanner,
+  StatusBase,
+} from '@server/lib/scanners/baseScanner';
+import BaseScanner from '@server/lib/scanners/baseScanner';
+import type { RadarrSettings } from '@server/lib/settings';
+import { getSettings } from '@server/lib/settings';
 import { uniqWith } from 'lodash';
-import RadarrAPI, { RadarrMovie } from '../../../api/servarr/radarr';
-import { getSettings, RadarrSettings } from '../../settings';
-import BaseScanner, { RunnableScanner, StatusBase } from '../baseScanner';
 
 type SyncStatus = StatusBase & {
   currentServer: RadarrSettings;
@@ -73,7 +79,7 @@ class RadarrScanner
   }
 
   private async processRadarrMovie(radarrMovie: RadarrMovie): Promise<void> {
-    if (!radarrMovie.monitored && !radarrMovie.downloaded) {
+    if (!radarrMovie.monitored && !radarrMovie.hasFile) {
       this.log(
         'Title is unmonitored and has not been downloaded. Skipping item.',
         'debug',
@@ -92,7 +98,7 @@ class RadarrScanner
         externalServiceId: radarrMovie.id,
         externalServiceSlug: radarrMovie.titleSlug,
         title: radarrMovie.title,
-        processing: !radarrMovie.downloaded,
+        processing: !radarrMovie.hasFile,
       });
     } catch (e) {
       this.log('Failed to process Radarr media', 'error', {

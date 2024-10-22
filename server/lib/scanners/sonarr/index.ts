@@ -1,13 +1,17 @@
-import { uniqWith } from 'lodash';
-import { getRepository } from 'typeorm';
-import SonarrAPI, { SonarrSeries } from '../../../api/servarr/sonarr';
-import Media from '../../../entity/Media';
-import { getSettings, SonarrSettings } from '../../settings';
-import BaseScanner, {
+import type { SonarrSeries } from '@server/api/servarr/sonarr';
+import SonarrAPI from '@server/api/servarr/sonarr';
+import type { TmdbTvDetails } from '@server/api/themoviedb/interfaces';
+import { getRepository } from '@server/datasource';
+import Media from '@server/entity/Media';
+import type {
   ProcessableSeason,
   RunnableScanner,
   StatusBase,
-} from '../baseScanner';
+} from '@server/lib/scanners/baseScanner';
+import BaseScanner from '@server/lib/scanners/baseScanner';
+import type { SonarrSettings } from '@server/lib/settings';
+import { getSettings } from '@server/lib/settings';
+import { uniqWith } from 'lodash';
 
 type SyncStatus = StatusBase & {
   currentServer: SonarrSettings;
@@ -83,24 +87,24 @@ class SonarrScanner
       const mediaRepository = getRepository(Media);
       const server4k = this.enable4kShow && this.currentServer.is4k;
       const processableSeasons: ProcessableSeason[] = [];
-      let tmdbId: number;
+      let tvShow: TmdbTvDetails;
 
       const media = await mediaRepository.findOne({
         where: { tvdbId: sonarrSeries.tvdbId },
       });
 
       if (!media || !media.tmdbId) {
-        const tvShow = await this.tmdb.getShowByTvdbId({
+        tvShow = await this.tmdb.getShowByTvdbId({
           tvdbId: sonarrSeries.tvdbId,
         });
-
-        tmdbId = tvShow.id;
       } else {
-        tmdbId = media.tmdbId;
+        tvShow = await this.tmdb.getTvShow({ tvId: media.tmdbId });
       }
 
-      const filteredSeasons = sonarrSeries.seasons.filter(
-        (sn) => sn.seasonNumber !== 0
+      const tmdbId = tvShow.id;
+
+      const filteredSeasons = sonarrSeries.seasons.filter((sn) =>
+        tvShow.seasons.find((s) => s.season_number === sn.seasonNumber)
       );
 
       for (const season of filteredSeasons) {
